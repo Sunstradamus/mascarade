@@ -1,3 +1,4 @@
+USE mascarade;
 CREATE TABLE news (
         id int(11) NOT NULL AUTO_INCREMENT,
         title varchar(128) NOT NULL,
