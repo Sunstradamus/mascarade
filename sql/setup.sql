@@ -1,0 +1,4 @@
+SET PASSWORD FOR 'root'@'localhost' = PASSWORD('SekurePassword');
+DROP DATABASE IF EXISTS mascarade;
+CREATE DATABASE mascarade;
+GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, DROP, INDEX, ALTER, CREATE TEMPORARY TABLES, LOCK TABLES ON mascarade.* TO 'webapp'@'localhost' IDENTIFIED BY 'SekretPassWord';
