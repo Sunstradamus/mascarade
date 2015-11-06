@@ -9,6 +9,7 @@ package "libapache2-mod-auth-mysql"
 package "php5-mysql"
 package "phpmyadmin"
 package "nodejs"
+package "npm"
 
 # Setup LAMP
 cookbook_file "000-default.conf" do
@@ -20,11 +21,15 @@ end
 cookbook_file "my.cnf" do
     path "/etc/mysql/my.cnf"
 end
+cookbook_file "php.ini" do
+    path "/etc/php5/apache2/php.ini"
+end
 execute 'mysql_restart' do
     command 'service mysql restart'
 end
 execute 'php_enable' do
     command 'a2enmod php5'
+    command 'php5enmod mcrypt'
     command 'service apache2 restart'
 end
 execute 'mysql_config' do

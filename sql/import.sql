@@ -1,12 +1,8 @@
 USE mascarade;
-CREATE TABLE news (
-        id int(11) NOT NULL AUTO_INCREMENT,
-        title varchar(128) NOT NULL,
-        slug varchar(128) NOT NULL,
-        text text NOT NULL,
-        PRIMARY KEY (id),
-        KEY slug (slug)
-);
 
-INSERT INTO news (title, slug, text) VALUES ('Hello World', 'hello-world', 'Hellow World!');
-INSERT INTO news (title, slug, text) VALUES ('Test World', 'test-world', 'Test World!');
+CREATE TABLE IF NOT EXISTS `users` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `username` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `password` varchar(60) COLLATE utf8mb4_unicode_ci NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci AUTO_INCREMENT=1;
