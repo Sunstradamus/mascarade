@@ -1,0 +1,11 @@
+{
+  "name": "mascarade-server",
+  "version": "0.0.0",
+  "description": "",
+  "main": "GameCoordinator.js",
+  "author": "",
+  "license": "BSD-2-Clause",
+  "dependencies": {
+    "ws": "~0.8.0"
+  }
+}

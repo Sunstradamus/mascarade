@@ -1,0 +1,3 @@
+Recv:
+1 - Authenticate
+2 - Authentication approved

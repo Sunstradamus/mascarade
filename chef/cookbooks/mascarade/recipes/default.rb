@@ -40,3 +40,6 @@ execute 'mysql_import' do
 end
 
 # Setup nodejs
+execute 'nodejs_config' do
+    command 'ln -s `which nodejs` /usr/bin/node'
+end
