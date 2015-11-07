@@ -1,0 +1,16 @@
+LAMP:
+ - Basic user management
+ - Game Client
+   - Client listens/reacts to authoritative GS packets
+
+GC - Game Coordinator:
+ - Responsible for lobby lists/status
+ - Syncs with GS for lobby/server (interchangable) details
+   - Server status
+   - User count
+   - Game state
+   - Game results
+
+GS - Game Server:
+ - Responsible for authing ws connections
+ - State-driven loop
