@@ -1,3 +1,6 @@
 Recv:
 1 - Authenticate
 2 - Authentication approved
+
+100 - Regenerated authentication key
+101 - Insufficient users to start game
