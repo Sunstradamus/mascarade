@@ -1,5 +1,6 @@
 <?php
 require_once '/home/vagrant/project/phpcore/core.inc.php';
+authenticate_user();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -8,7 +9,7 @@ require_once '/home/vagrant/project/phpcore/core.inc.php';
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
-    <title>Mascarade - Login</title>
+    <title>Mascarade</title>
 
     <!-- Bootstrap -->
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css" integrity="sha512-dTfge/zgoMYpP7QbHy4gWMEGsbsdZeCXz7irItjcC3sPUFtf0kuFbDz/ixG7ArTxmDjLXDmezHubeNikyKGVyQ==" crossorigin="anonymous">
@@ -22,17 +23,8 @@ require_once '/home/vagrant/project/phpcore/core.inc.php';
     <![endif]-->
   </head>
   <body>
-    <div id="container">
-      <div id="content">
-        <form class="form-signin" method="post" action="/login.php">
-          <h2 class="form-signin-heading">Please sign in</h2>
-          <label for="inputUsername" class="sr-only">Username</label>
-          <input type="text" id="inputUsername" class="form-control" placeholder="Username" required autofocus>
-          <label for="inputPassword" class="sr-only">Password</label>
-          <input type="password" id="inputPassword" class="form-control" placeholder="Password" required>
-          <button class="btn btn-lg btn-primary btn-block" type="submit">Sign in</button>
-        </form>
-      </div>
+    <div class="container">
+      Hi
     </div>
 
     <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
