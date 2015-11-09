@@ -43,3 +43,6 @@ end
 execute 'nodejs_config' do
     command 'ln -s `which nodejs` /usr/bin/node'
 end
+execute 'install_forever' do
+    command 'npm install forever -g'
+end
