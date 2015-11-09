@@ -20,6 +20,9 @@ switch (mode) {
       switch(req.method) {
         case 'GET':
           switch(url.pathname) {
+            case '/user_token':
+              res.end();
+              break;
             case '/new_lobby':
               res.write('test');
               res.end();
@@ -33,6 +36,9 @@ switch (mode) {
           break;
         case 'POST':
           switch(url.pathname) {
+            case '/user_token':
+              res.end();
+              break;
             default:
               res.end();
               break;
