@@ -2,6 +2,11 @@ LAMP:
  - Basic user management
  - Game Client
    - Client listens/reacts to authoritative GS packets
+ - Responsible for handling user auth for GC
+   - Generate one-time auth token & send to master GC
+   - Client will request for auth token & send to GS
+   - GS will verify with GC & if valid GC will revoke/discard token
+   - If invalid, GC will discard token and client will need to regenerate from LAMP stack and repeat
 
 GC - Game Coordinator:
  - Responsible for lobby lists/status

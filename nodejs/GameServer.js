@@ -110,13 +110,16 @@ var GameServer = function() {
             con.terminate();
           }
           break;
-        // Using 5 to check connection vars, remove once I figure out how websockets work when clients disconnect
-        case 5:
+        // Using 999, 998 to check connection vars & exit conditions, remove once I figure out how websockets work when clients disconnect
+        case 999:
           if (con === self.userList[msg.username].connection) {
             con.send("TRUE");
           } else {
             con.send("FALSE");
           }
+          break;
+        case 998:
+          process.exit();
           break;
         // Junk message received, ignore it (Or terminate connection?)
         default:
@@ -133,6 +136,13 @@ var GameServer = function() {
     self.lobbyHost = '';
     self.state = GameServerState.WAITING_FOR_USERS;
     self.userList = {};
+
+    /*process.on('uncaughtException', function(err) {
+      console.log("Caught Exception: "+err);
+
+      // Send GC a notification that the server crashed (is about to exit)
+      process.exit();
+    });*/
   };
 
   self.processGameState = function() {
