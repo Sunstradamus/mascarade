@@ -1,10 +1,12 @@
-if (process.argv.length != 3) {
-    console.log("Usage: node GameServer.js [lobby-id]");
+if (process.argv.length != 4) {
+    console.log("Usage: node GameServer.js [lobby-id] [port]");
     return;
 }
 var lobbyId = process.argv[2],
+    lobbyPort = process.argv[3],
+    request = require('http').request,
     WebSocketServer = require('ws').Server,
-    wss = new WebSocketServer({ port: 8080, path: '/'+lobbyId });
+    wss = new WebSocketServer({ port: lobbyPort, path: '/'+lobbyId });
 // TODO: Refactor state enum into its own file
 var GameServerState = Object.freeze({
   WAITING_FOR_USERS: 0,
@@ -14,6 +16,12 @@ var GameServerState = Object.freeze({
 var GameServer = function() {
 
   var self = this;
+
+  self.activityCheck = function() {
+    if (self.state === GameServerState.WAITING_FOR_USERS) {
+      self.updateGC('exit');
+    }
+  };
 
   self.addUser = function(con) {
     con.on('message', function msgHandler(message) {
@@ -119,7 +127,7 @@ var GameServer = function() {
           }
           break;
         case 998:
-          process.exit();
+          self.updateGC('exit');
           break;
         // Junk message received, ignore it (Or terminate connection?)
         default:
@@ -153,9 +161,26 @@ var GameServer = function() {
     var userCount = Object.keys(self.userList).length;
     if (userCount < 3) {
       self.userList[self.lobbyHost].connection.send(JSON.stringify({ id: 101 }));
+    } else if (userCount > 13) {
+      self.userList[self.lobbyHost].connection.send(JSON.stringify({ id: 102 }));
     } else {
       self.state = GameServerState.STARTED_FORCE_SWAP;
       //self.gameLoop = setTimeout(self.processGameState, 30000);
+    }
+  };
+
+  self.updateGC = function(status) {
+    switch(status) {
+      case 'exit':
+        var req = request({ hostname: 'localhost', port: '8000', path: '/lobby?id='+lobbyId, method: 'DELETE' }, function(res) {
+          console.log(res.statusCode);
+          process.exit();
+        }).on('error', function(err) {
+          console.log(err);
+        }).end();
+        return;
+      default:
+        return;
     }
   };
 
@@ -166,3 +191,4 @@ gs.initialize();
 wss.on('connection', function connection(ws) {
   gs.addUser(ws);
 });
+setTimeout(gs.activityCheck, 300000);

@@ -12,11 +12,12 @@ switch (mode) {
     break;
   // Run as both a master and cluster GC server
   case 'combined':
-    var exec = require('exec'),
+    var spawn = require('child_process').spawn,
         http = require('http'),
         parser = require('url').parse;
 
     var lobbies = {};
+    var basePort = 8080;
     http.createServer(function(req, res) {
       var url = parser(req.url, true);
       res.setHeader("Content-Type", "application/json; charset=UTF-8");
@@ -32,20 +33,20 @@ switch (mode) {
               for (var i = 0; i < 5; i++) {
                 id += allowed.charAt(Math.floor(Math.random() * 36));
               }
-              exec('node /home/vagrant/project/nodejs/GameServer.js '+id, function (error) {
-                if (error !== null) {
-                  res.write(JSON.stringify({ error: "Could not start GameServer" }));
-                } else {
-                  lobbies[id] = { state: 0 };
-                  res.write(JSON.stringify({ id: id, state: 0 }));
-                }
-              });
+              spawn('node', ['/home/vagrant/project/nodejs/GameServer.js', id, basePort], { detached: true });
+              lobbies[id] = { state: 0, port: basePort };
+              res.write(JSON.stringify({ id: id, state: 0, port: basePort }));
               res.end();
+              basePort += 1;
+              if (basePort > 9080) {
+                basePort = 8080;
+              }
               break;
             case '/lobbies':
               res.write(JSON.stringify(lobbies));
               res.end();
             default:
+              res.statusCode = 400;
               res.end();
               break;
           }
@@ -56,6 +57,7 @@ switch (mode) {
               res.end();
               break;
             default:
+              res.statusCode = 400;
               res.end();
               break;
           }
@@ -63,14 +65,25 @@ switch (mode) {
         case 'DELETE':
           switch(url.pathname) {
             case '/lobby':
+              if (url.query.id) {
+                if (lobbies.hasOwnProperty(url.query.id)) {
+                  delete lobbies[url.query.id];
+                } else {
+                  res.statusCode = 404;
+                }
+              } else {
+                res.statusCode = 400;
+              }
               res.end();
               break;
             default:
+              res.statusCode = 400;
               res.end();
               break;
           }
           break;
         default:
+          res.statusCode = 400;
           res.end();
           break;
       }

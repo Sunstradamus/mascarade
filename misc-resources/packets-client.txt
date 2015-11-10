@@ -4,3 +4,4 @@ Recv:
 
 100 - Regenerated authentication key
 101 - Insufficient users to start game
+102 - Too many users to start game
