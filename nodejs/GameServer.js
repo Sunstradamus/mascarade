@@ -151,6 +151,7 @@ var GameServer = function() {
       // Send GC a notification that the server crashed (is about to exit)
       process.exit();
     });*/
+    setTimeout(self.activityCheck, 300000);
   };
 
   self.processGameState = function() {
@@ -191,4 +192,3 @@ gs.initialize();
 wss.on('connection', function connection(ws) {
   gs.addUser(ws);
 });
-setTimeout(gs.activityCheck, 300000);

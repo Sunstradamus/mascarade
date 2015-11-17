@@ -1,0 +1,18 @@
+If someone leaves:
+	- skip on their turn
+	- cannot be inquired
+
+If no response in time limit, turn is skipped
+
+When someone claims an action:
+	- Server notifies all players of action claimed
+	- Players have 10s to respond, default is no
+	- Players are not notified of others' response
+	- Outcome is revealed at the end
+
+When someone is executing an action:
+	- If not input is received, they lose their action
+
+When someone chooses to swap or not:
+	- Broadcast target
+

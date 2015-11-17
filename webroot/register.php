@@ -1,33 +1,48 @@
 <?php
 require_once '/home/vagrant/project/phpcore/core.inc.php';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-  if (isset($_POST['username'], $_POST['password'])) {
+  if (isset($_POST['username'], $_POST['password'], $_POST['verification'])) {
     $mysqli = new mysqli(MYSQL_HOST, MYSQL_USER, MYSQL_PASS, MYSQL_DTBS);
     if ($mysqli->connect_error) {
       throw new Exception('MySQL Error: '.$mysqli->connect_error);
     }
+  }
 
-    $username = $_POST['username'];
-    $stmt = $mysqli->prepare("SELECT `id`, `username`, `password` FROM `users` WHERE `username`=?");
-    $stmt->bind_param("s", $username);
-    $stmt->execute();
-    $stmt->bind_result($id, $username, $password);
-    if ($stmt->fetch() === NULL) {
-      // User was not found
-      $error_msg = 'Wrong username or password.';
-    } else {
-      if (password_verify($_POST['password'], $password)) {
-        // Valid
-        $_SESSION['user']['id'] = $id;
-        $_SESSION['user']['username'] = $username;
-        $_SESSION['user']['hash'] = md5($id.$_SERVER['HTTP_USER_AGENT']);
-        header("Location: ".BASE_URL);
+  if ($_POST['password'] === $_POST['verification']) {
+    if (mb_strlen($_POST['password']) > 5) {
+      if (mb_strlen($_POST['username']) > 5) {
+        if (ctype_alnum($_POST['username'])) {
+          $username = $_POST['username'];
+          $stmt = $mysqli->prepare("SELECT `id`, `username`, `password` FROM `users` WHERE `username`=?");
+          $stmt->bind_param("s", $username);
+          $stmt->execute();
+          if ($stmt->fetch() === NULL) {
+            $stmt->close();
+            $stmt = $mysqli->prepare("INSERT INTO `users`(`username`, `password`) VALUES (?, ?)");
+            $stmt->bind_param("ss", $username, $password);
+            $username = $_POST['username'];
+            $password = password_hash($_POST['password'], PASSWORD_BCRYPT);
+            $stmt->execute();
+
+            $_SESSION['user']['id'] = $mysqli->insert_id;
+            $_SESSION['user']['username'] = $_POST['username'];
+            $_SESSION['user']['hash'] = md5($mysqli->insert_id.$_SERVER['HTTP_USER_AGENT']);
+            header("Location: ".BASE_URL);
+          } else {
+            $stmt->close();
+            $error_msg = 'Username already in use';
+          }
+        } else {
+          $error_msg = 'Username can only consist of alphanumeric characters';
+        }
       } else {
-        // Invalid
-        $error_msg = 'Wrong username or password.';
+        $error_msg = 'Username too short';
       }
+    } else {
+      $error_msg = 'Password too short';
     }
-    $stmt->close();
+  } else {
+    $error_msg = 'Passwords did not match';
   }
 }
 ?>
@@ -37,7 +52,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Mascarade - Login</title>
+    <title>Mascarade - Register</title>
 
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css" integrity="sha512-dTfge/zgoMYpP7QbHy4gWMEGsbsdZeCXz7irItjcC3sPUFtf0kuFbDz/ixG7ArTxmDjLXDmezHubeNikyKGVyQ==" crossorigin="anonymous">
     <link rel="stylesheet" href="/css/default.css">
@@ -50,8 +65,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <body>
     <div id="container">
       <div id="content">
-        <form class="form-signin" method="post" action="/login.php">
-          <h2 class="form-signin-heading">Please sign in</h2>
+        <form class="form-signin" method="post" action="/register.php">
+          <h2 class="form-signin-heading">Registration</h2>
 <?PHP
 if (isset($error_msg)):
 ?>
@@ -63,14 +78,9 @@ endif;
           <input type="text" id="inputUsername" name="username" class="form-control" placeholder="Username" required autofocus>
           <label for="inputPassword" class="sr-only">Password</label>
           <input type="password" id="inputPassword" name="password" class="form-control" placeholder="Password" required>
-          <div class="row">
-            <div class="col-xs-6">
-              <a href="/register.php" class="btn btn-lg btn-info btn-block">Register</a>
-            </div>
-            <div class="col-xs-6">
-              <button class="btn btn-lg btn-primary btn-block" type="submit">Sign in</button>
-            </div>
-          </div>
+          <label for="inputPassword" class="sr-only">Verify</label>
+          <input type="password" id="inputPassword" name="verification" class="form-control" required>
+          <button class="btn btn-lg btn-primary btn-block" type="submit">Register</button>
         </form>
       </div>
     </div>
