@@ -9,25 +9,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 	$username = $_POST['username'];
 	$password = $_POST['password'];
 	$confirmPass = $_POST['confirmPass'];
-	
-	if (strcmp($password, $confirmPass) == 0) {
-		$stmt = $mysqli->prepare("SELECT `username`, FROM `users` WHERE `username`=?");
-		$stmt->bind_param("s", $username);
-		$stmt->execute();
-		$stmt->bind_result($username);
-		
-		if ($stmt->fetch() === NULL) {
-			$stmt = $mysqli->prepare("INSERT INTO `users` (`username`, `password`) VALUES (?, ?)");
-			$stmt->bind_param("ss", $username. $password);
-			$stmt->execute();
-			$success_msg = "Account created.";
-		} else {
-			$error_msg = "That username is already taken.";
-		}
-		$stmt->close();
-	} else {
-		$error_msg = "Your passwords don't match.";
-	}
 }
 ?>
 <!DOCTYPE html>
@@ -51,44 +32,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 	<body>
 		<div id="container">
 			<div id="content">
-				<div id="errorsGoHere"></div>
-				<?PHP
-				if (isset($success_msg)):
-				?>
-				<div class="alert alert-success" role="alert"><?PHP html($success_msg); ?></div>
-				<?PHP
-				endif;
-				?>
-				<?PHP
-				if (isset($error_msg)):
-				?>
-				<div class="alert alert-error" role="alert"><?PHP html($error_msg); ?></div>
-				<?PHP
-				endif; 
-				?>
-				<form action="/register.php" id="register" class="form-register" method="post">
-					<h2 class="form-register-heading">Register</h2>
-					<div class="form-group">
-						<label for="username" class="sr-only">User Name</label>
-						<input type="text" class="form-control" id="username" name="username" placeholder="Username" required />
+				<div class="row">
+					<div class="col-xs-4 col-xs-offset-4">
+						<div id="errorsGoHere"></div>
+						<form action="/register.php" id="register" method="post">
+							<div class="form-group">
+								<label for="username" class="control-label">User Name</label>
+								<input type="text" class="form-control" id="username" name="username" />
+							</div>
+							<div class="form-group">
+								<label for="password" class="control-label">Password</label>
+								<input type="password" class="form-control" id="password" name="password" />
+							</div>
+							<div class="form-group">
+								<label for="confirmPass" class="control-label">Confirm Password</label>
+								<input type="password" class="form-control" id="confirmPass" name="confirmPass" />
+							</div>
+						</form>
 					</div>
-					<div class="form-group">
-						<label for="password" class="sr-only">Password</label>
-						<input type="password" class="form-control" id="password" name="password" placeholder="Password" required />
-					</div>
-					<div class="form-group">
-						<label for="confirmPass" class="sr-only">Confirm Password</label>
-						<input type="password" class="form-control" id="confirmPass" name="confirmPass"  placeholder="Confirm Password" required />
-					</div>
-					<div class="row">
-						<div class="col-xs-6">
-						  <button class="btn btn-lg btn-primary btn-block" type="submit">Register</button>
-						</div>
-						<div class="col-xs-6">
-						  <a href="/login.php" class="btn btn-lg btn-default btn-block">Cancel</a>
-						</div>
-				  </div>
-				</form>
+				</div>
 			</div>
 		</div>
 	</body>
