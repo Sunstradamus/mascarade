@@ -10,7 +10,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
   if ($_POST['password'] === $_POST['verification']) {
     if (mb_strlen($_POST['password']) > 5) {
-      if (mb_strlen($_POST['username']) > 5) {
+      if (mb_strlen($_POST['username']) > 5 && mb_strlen($_POST['username']) < 21) {
         if (ctype_alnum($_POST['username'])) {
           $username = $_POST['username'];
           $stmt = $mysqli->prepare("SELECT `id`, `username`, `password` FROM `users` WHERE `username`=?");
@@ -36,7 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           $error_msg = 'Username can only consist of alphanumeric characters';
         }
       } else {
-        $error_msg = 'Username too short';
+        $error_msg = 'Bad username length';
       }
     } else {
       $error_msg = 'Password too short';
@@ -65,8 +65,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <body>
     <div id="container">
       <div id="content">
-        <form class="form-signin" method="post" action="/register.php">
-          <h2 class="form-signin-heading">Registration</h2>
+        <form class="form-registration" method="post" action="/register.php">
+          <h2 class="form-registration-heading">Registration</h2>
 <?PHP
 if (isset($error_msg)):
 ?>
@@ -78,8 +78,8 @@ endif;
           <input type="text" id="inputUsername" name="username" class="form-control" placeholder="Username" required autofocus>
           <label for="inputPassword" class="sr-only">Password</label>
           <input type="password" id="inputPassword" name="password" class="form-control" placeholder="Password" required>
-          <label for="inputPassword" class="sr-only">Verify</label>
-          <input type="password" id="inputPassword" name="verification" class="form-control" required>
+          <label for="inputPassword" class="sr-only">Confirm Password</label>
+          <input type="password" id="inputVerification" name="verification" class="form-control" placeholder="Confirm Password" required>
           <button class="btn btn-lg btn-primary btn-block" type="submit">Register</button>
         </form>
       </div>

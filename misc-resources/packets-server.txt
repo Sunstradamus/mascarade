@@ -1,4 +1,6 @@
 Recv:
 1 - Authentication response
+2
 3 - Start game
 4 - Leave lobby
+5 - Player's action

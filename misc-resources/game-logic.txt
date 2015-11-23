@@ -16,3 +16,5 @@ When someone is executing an action:
 When someone chooses to swap or not:
 	- Broadcast target
 
+Middle cards:
+	- 0 = left, 1 = right

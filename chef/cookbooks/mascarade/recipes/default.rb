@@ -29,6 +29,9 @@ execute 'mysql_restart' do
 end
 execute 'php_enable' do
     command 'a2enmod php5'
+    command 'service apache2 restart'
+end
+execute 'php_mcrypt' do
     command 'php5enmod mcrypt'
     command 'service apache2 restart'
 end
