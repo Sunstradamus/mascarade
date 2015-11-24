@@ -12,6 +12,9 @@ var GameServerState = Object.freeze({
   WAITING_FOR_USERS: 0,
   STARTED_FORCE_SWAP: 1,
   STARTED_NORMAL: 2,
+  STARTED_CLAIM_CHARACTER: 3,
+  STARTED_CONTEST_CLAIM: 4,
+  STARTED_PROCESS_CLAIM: 5,
 });
 // TODO: Cards in own file
 var GameCard = Object.freeze({
@@ -149,16 +152,23 @@ var GameServer = function() {
             if (self.userList[msg.username].auth === msg.auth && con === self.userList[msg.username].connection) {
               switch(self.state) {
                 case GameServerState.STARTED_FORCE_SWAP:
-                  if (msg.hasOwnProperty('act') && msg.act === GameAction.SWAP_CARD && msg.hasOwnProperty('target') && msg.hasOwnProperty('fake') && self.userList.hasOwnProperty(msg.target)) {
+                  if (msg.hasOwnProperty('act') && msg.act === GameAction.SWAP_CARD && msg.hasOwnProperty('target') && msg.hasOwnProperty('fake') && (self.userList.hasOwnProperty(msg.target) || (msg.target === 0 && msg.target < self.centerCards.length) || (msg.target === 1 && msg.target < self.centerCards.length))) {
                     clearTimeout(self.gameLoop);
                     if (msg.fake) {
                       // Fake swap
                     } else {
                       // Real swap
-                      var temp;
-                      temp = self.userList[msg.username].card;
-                      self.userList[msg.username].card = self.userList[msg.target].card;
-                      self.userList[msg.target].card = temp;
+                      if (msg.target === 0 || msg.target === 1) {
+                        var temp;
+                        temp = self.userList[msg.username].card;
+                        self.userList[msg.username].card = self.centerCards[msg.target];
+                        self.centerCards[msg.target] = temp;
+                      } else {
+                        var temp;
+                        temp = self.userList[msg.username].card;
+                        self.userList[msg.username].card = self.userList[msg.target].card;
+                        self.userList[msg.target].card = temp;
+                      }
                     }
                     self.broadcast(JSON.stringify({ id: 200, target: msg.target }));
                     self.forceSwapCount += 1;
@@ -176,16 +186,23 @@ var GameServer = function() {
                   if (msg.hasOwnProperty('act')) {
                     switch(msg.act) {
                       case GameAction.SWAP_CARD:
-                        if (msg.hasOwnProperty('target') && msg.hasOwnProperty('fake') && self.userList.hasOwnProperty(msg.target)) {
+                        if (msg.hasOwnProperty('target') && msg.hasOwnProperty('fake') && (self.userList.hasOwnProperty(msg.target) || (msg.target === 0 && msg.target < self.centerCards.length) || (msg.target === 1 && msg.target < self.centerCards.length))) {
                           clearTimeout(self.gameLoop);
                           if (msg.fake) {
                             // Fake swap
                           } else {
                             // Real swap
-                            var temp;
-                            temp = self.userList[msg.username].card;
-                            self.userList[msg.username].card = self.userList[msg.target].card;
-                            self.userList[msg.target].card = temp;
+                            if (msg.target === 0 || msg.target === 1) {
+                              var temp;
+                              temp = self.userList[msg.username].card;
+                              self.userList[msg.username].card = self.centerCards[msg.target];
+                              self.centerCards[msg.target] = temp;
+                            } else {
+                              var temp;
+                              temp = self.userList[msg.username].card;
+                              self.userList[msg.username].card = self.userList[msg.target].card;
+                              self.userList[msg.target].card = temp;
+                            }
                           }
                           self.broadcast(JSON.stringify({ id: 200, target: msg.target }));
                           self.gameLoop = setTimeout(self.processGameState, 30000);
@@ -202,6 +219,17 @@ var GameServer = function() {
                         self.processGameState();
                         break;
                       case GameAction.CLAIM_CHARACTER:
+                        // Commented out so you can't break the server.
+                        /* if (msg.hasOwnProperty('character') && (self.playerCards.indexOf(msg.character) > -1)) {
+                          clearTimeout(self.gameLoop);
+                          self.state = GameServerState.STARTED_CLAIM_CHARACTER;
+                          self.claimedCharacter = msg.character;
+                          self.broadcast(JSON.stringify({ id: 202, claimed: msg.character }));
+                          self.gameLoop = setTimeout(self.processGameState, 30000);
+                          self.processGameState();
+                        } else {
+                          con.send(JSON.stringify({ id: 103 }));
+                        } */
                         break;
                       default:
                         con.send(JSON.stringify({ id: 103 }));
@@ -214,6 +242,44 @@ var GameServer = function() {
                 default:
                   con.send(JSON.stringify({ id: 103 }));
                   break;
+              }
+            } else {
+              if (self.userList[msg.username].auth === msg.auth) {
+                // Bogus connection, not the original connection
+                // NOTE: I actually don't know what happens when the browser disconnects, does it attempt to reconnect on the same socket ID?
+                con.terminate();
+              } else {
+                // Invalid auth key, someone may have tried to guess/hijack it so regen key and send back to original client
+                var authKey = Math.floor(Math.random() * 101);
+                self.userList[msg.username].auth = authKey;
+                self.userList[msg.username].connection.send(JSON.stringify({ id: 100, auth: authKey }));
+              }
+            }
+          } else {
+            con.terminate();
+          }
+          break;
+        case 6:
+          if (msg.username && msg.auth) {
+            // Check if user is even authenticated for our server
+            if (!self.userList.hasOwnProperty(msg.username)) {
+              con.terminate();
+              break;
+            }
+            if (self.userList[msg.username].auth === msg.auth && con === self.userList[msg.username].connection) {
+              if (self.state === GameServerState.STARTED_CLAIM_CHARACTER && msg.hasOwnProperty('contest')) {
+                if (msg.contest) {
+                  self.contester.push(msg.username);
+                }
+                self.contestCounter += 1;
+                if (self.contestCounter === self.playerList.length) {
+                  clearTimeout(self.gameLoop);
+                  self.STARTED_CONTEST_CLAIM;
+                  self.gameLoop = setTimeout(self.processGameState, 30000);
+                  self.processGameState();
+                }
+              } else {
+                con.send(JSON.stringify({ id: 103 }));
               }
             } else {
               if (self.userList[msg.username].auth === msg.auth) {
@@ -259,6 +325,11 @@ var GameServer = function() {
     con.send(JSON.stringify({ id: 1 }));
   };
 
+  self.advanceTurn = function() {
+    self.gameLoop = setTimeout(self.processGameState, 30000);
+    self.turn = (self.turn + 1) % self.playerList.length;
+  }
+
   self.broadcast = function(msg) {
     for (var i = self.playerList.length - 1; i >= 0; i--) {
       self.userList[self.playerList[i]].connection.send(msg);
@@ -266,7 +337,6 @@ var GameServer = function() {
   };
 
   self.dealCards = function() {
-    self.playerCards = [];
     switch(self.playerList.length) {
       case 4:
         var cards = [GameCard.JUDGE, GameCard.BISHOP, GameCard.KING, GameCard.QUEEN, GameCard.THIEF, GameCard.CHEAT];
@@ -366,9 +436,14 @@ var GameServer = function() {
   self.initialize = function() {
     self.centerCards;
     self.gameLoop;
-    self.playerCoins = [];
     self.playerList;
+    self.claimedCharacter = -1;
+    self.contestCounter = 0;
+    self.contester = [];
+    self.doneWaiting = false;
     self.lobbyHost = '';
+    self.playerCards = [];
+    self.playerCoins = [];
     self.state = GameServerState.WAITING_FOR_USERS;
     self.userList = {};
 
@@ -383,16 +458,35 @@ var GameServer = function() {
 
   self.processGameState = function() {
     clearTimeout(self.gameLoop);
-    self.gameLoop = setTimeout(self.processGameState, 30000);
-    self.turn = (self.turn + 1) % self.playerList.length;
     switch(self.state) {
       case GameServerState.STARTED_FORCE_SWAP:
+        self.advanceTurn();
         self.broadcast(JSON.stringify({ state: self.state, players: self.playerList, playerCoins: self.playerCoins, turn: self.turn }));
         self.userList[self.playerList[self.turn]].connection.send(JSON.stringify({ id: 5, actions: GameAction.SWAP_CARD }));
         break;
       case GameServerState.STARTED_NORMAL:
+        self.advanceTurn();
         self.broadcast(JSON.stringify({ state: self.state, players: self.playerList, playerCoins: self.playerCoins, turn: self.turn }));
         self.userList[self.playerList[self.turn]].connection.send(JSON.stringify({ id: 5, actions: GameAction.SWAP_CARD | GameAction.VIEW_OWN_CARD | GameAction.CLAIM_CHARACTER }));
+        break;
+      case GameServerState.STARTED_CLAIM_CHARACTER:
+        if (self.doneWaiting) {
+          self.doneWaiting = false;
+          if (self.contestCounter > 0) {
+            self.state = GameServerState.STARTED_CONTEST_CLAIM;
+          } else {
+            self.state = GameServerState.STARTED_PROCESS_CLAIM;
+          }
+          setImmediate(self.processGameState);
+          return;
+        } else {
+          self.broadcast(JSON.stringify({ state: self.state, players: self.playerList, playerCoins: self.playerCoins, turn: self.turn, claimed: self.claimedCharacter }));
+          self.doneWaiting = true;
+        }
+        break;
+      case GameServerState.STARTED_CONTEST_CLAIM:
+        break;
+      case GameServerState.STARTED_PROCESS_CLAIM:
         break;
     }
   };
@@ -427,7 +521,6 @@ var GameServer = function() {
       self.forceSwapCount = 0;
       self.dealCards();
       self.broadcast(JSON.stringify({ players: self.playerList, playerCards: self.playerCards, playerCoins: self.playerCoins, middle: self.centerCards }));
-      delete self.playerCards;
       // Start the game loop
       self.gameLoop = setTimeout(self.processGameState, 30000);
       // Start the game

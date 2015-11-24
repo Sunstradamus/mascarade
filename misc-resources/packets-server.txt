@@ -4,3 +4,4 @@ Recv:
 3 - Start game
 4 - Leave lobby
 5 - Player's action
+6 - Contest character
