@@ -12,14 +12,8 @@
   height:100%;
 }
 
-.game-area {
-  margin-top: 5em;
-  padding: 0px 0px 0px 0px;
-  height: 1000px;
-}
-
 .card-area {
-  height: 67%;
+  height: 60%;
   border: 5px solid #ffcc00;
   border-bottom: 2px solid #ffcc00;
   background: #60c;
@@ -27,20 +21,34 @@
 }
 
 .action-area {
+  vertical-align: middle;
+  padding: 1em;
   border: 5px solid #ffcc00;
   border-top: 0px solid #000;
-  min-height: 33%;
+  height: 40%;
   background: #4c0099;
   background: rgba(76, 0, 153, 0.4);
+  margin-bottom: 1em;
 }
 
-.action-area img {
-  max-height: 25%;
-  cursor: pointer;
+.action-button {
+  height: auto;
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  text-align: center;
+}
 
+.buttons-area {
+  height: 100%;
+  vertical-align: middle;
 }
 
 .player-card {
+  padding-top: 1em;
+  width: 90%;
+  max-width: 100px;
+  height: auto;
   display: block;
   margin-left: auto;
   margin-right: auto;
@@ -48,16 +56,68 @@
 
 .username {
   color: #fff;
-  font-size: larger;
-  font-weight: strong;
+  font-weight: bold;
   text-align: center;
   display: block;
+  overflow: hidden; 
+}
+
+.my-username {
+  font-size: larger;
 }
 
 .gold {
   color: #fc0;
-  font-size: larger;
-  font-weight: strong;
+  font-weight: bold;
   text-align: center;
   display: block;
+  overflow: hidden;
+}
+
+.my-gold {
+  font-size: larger;
+}
+
+.my-card {
+  width: 60%;
+  height: auto;
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.my-card-area {
+  font-size: larger;
+}
+
+.game-area {
+  margin-top: 3em;
+  margin-bottom: 2em;
+}
+
+.game-log {
+  min-height: 500px;
+  padding-right: 1em;
+  border: 5px solid #ffcc00;
+  background: #4c0099;
+  background: rgba(26, 0, 63, 0.4);
+  position: relative;
+  overflow-y: scroll;
+}
+
+.game-arena {
+  height: 100%;
+}
+
+.log-entries {
+  position: absolute;
+  bottom: 0;
+  list-style: none;
+  padding-left: 0px;
+  color: #fff;
+}
+
+.entry {
+  border-top: 1px solid #fff;
+  padding: 0.5em 5%;
 }
