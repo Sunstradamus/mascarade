@@ -9,7 +9,10 @@ Recv:
 101 - Insufficient users to start game
 102 - Too many users to start game
 103 - Invalid action
+104 - Game over, one winner
+105 - Game over, tied/multiple winners
 
 200 - Player has swapped or not with target player
 201 - Player has looked at their own card
 202 - Player has claimed a character
+203 - You are the Fool, select two players to swap

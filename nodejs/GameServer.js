@@ -223,6 +223,7 @@ var GameServer = function() {
                         /* if (msg.hasOwnProperty('character') && (self.playerCards.indexOf(msg.character) > -1)) {
                           clearTimeout(self.gameLoop);
                           self.state = GameServerState.STARTED_CLAIM_CHARACTER;
+                          self.characterOwner = self.playerList.indexOf(msg.username);
                           self.claimedCharacter = msg.character;
                           self.broadcast(JSON.stringify({ id: 202, claimed: msg.character }));
                           self.gameLoop = setTimeout(self.processGameState, 30000);
@@ -326,7 +327,6 @@ var GameServer = function() {
   };
 
   self.advanceTurn = function() {
-    self.gameLoop = setTimeout(self.processGameState, 30000);
     self.turn = (self.turn + 1) % self.playerList.length;
   }
 
@@ -335,6 +335,38 @@ var GameServer = function() {
       self.userList[self.playerList[i]].connection.send(msg);
     };
   };
+
+  self.checkGameEnd = function() {
+    // Check if someone hits 0 to end the game; may have ties
+    if (self.playerCoins.indexOf(0) > -1) {
+      var playerIndex = -1;
+      var maxCoins = 0;
+      var winCounter = 0;
+      var ties = [];
+      for (var i = self.playerCoins.length - 1; i >= 0; i--) {
+        if (self.playerCoins[i] > maxCoins) {
+          playerIndex = i;
+          maxCoins = self.playerCoins[i];
+        }
+      };
+      for (var i = self.playerCoins.length - 1; i >= 0; i--) {
+        if (self.playerCoins[i] === maxCoins) {
+          winCounter += 1;
+          ties.push(i);
+        }
+      };
+      if (winCounter === 1) {
+        self.endGame(playerIndex);
+      } else {
+        self.endGame(ties);
+      }
+    }
+    // Hitting 13 means there aren't any possible ties except for the Peasant, who gets his own victory check in process_claim along with the cheat
+    var winner = self.playerCoins.indexOf(13);
+    if (winner > -1) {
+      self.endGame(winner);
+    }
+  }
 
   self.dealCards = function() {
     switch(self.playerList.length) {
@@ -433,13 +465,24 @@ var GameServer = function() {
     }
   };
 
+  self.endGame = function(winners) {
+    if (typeof winner === 'number') {
+      self.broadcast(JSON.stringify({ id: 104, winner: winners }));
+    } else {
+      self.broadcast(JSON.stringify({ id: 105, players: winners }));
+    }
+    self.updateGC('exit');
+  }
+
   self.initialize = function() {
     self.centerCards;
     self.gameLoop;
     self.playerList;
+    self.characterOwner = -1;
     self.claimedCharacter = -1;
     self.contestCounter = 0;
     self.contester = [];
+    self.courtCoins = 0;
     self.doneWaiting = false;
     self.lobbyHost = '';
     self.playerCards = [];
@@ -458,6 +501,8 @@ var GameServer = function() {
 
   self.processGameState = function() {
     clearTimeout(self.gameLoop);
+    self.checkGameEnd();
+    self.gameLoop = setTimeout(self.processGameState, 30000);
     switch(self.state) {
       case GameServerState.STARTED_FORCE_SWAP:
         self.advanceTurn();
@@ -477,6 +522,7 @@ var GameServer = function() {
           } else {
             self.state = GameServerState.STARTED_PROCESS_CLAIM;
           }
+          clearTimeout(self.gameLoop);
           setImmediate(self.processGameState);
           return;
         } else {
@@ -485,8 +531,100 @@ var GameServer = function() {
         }
         break;
       case GameServerState.STARTED_CONTEST_CLAIM:
+        var cards = [];
+        if (self.userList[self.playerList[self.turn]].card === self.claimedCharacter) {
+          self.characterOwner = self.turn;
+          cards[self.turn] = self.claimedCharacter;
+          while (self.contester.length > 0) {
+            var player = self.contester.pop();
+            var playerIndex = self.playerList.indexOf(user);
+            self.playerCoins[playerIndex] -= 1;
+            self.courtCoins += 1;
+            cards[playerIndex] = self.userList[player].card;
+          }
+          self.broadcast(JSON.stringify({ state: self.state, players: self.playerList, playerCoins: self.playerCoins, revealedCards: cards, turn: self.turn }));
+          self.state = GameServerState.STARTED_PROCESS_CLAIM;
+          clearTimeout(self.gameLoop);
+          setImmediate(self.processGameState);
+        } else {
+          cards[self.turn] = self.userList[self.playerList[self.turn]].card;
+          self.playerCoins[self.turn] -= 1;
+          self.courtCoins += 1;
+          while (self.contester.length > 0) {
+            var player = self.contester.pop();
+            var playerIndex = self.playerList.indexOf(user);
+            cards[playerIndex] = self.userList[player].card;
+            if (self.userList[player].card === self.claimedCharacter) {
+              self.characterOwner = playerIndex;
+            } else {
+              self.courtCoins += 1;
+              self.playerCoins[playerIndex] -= 1;
+            }
+          }
+          self.broadcast(JSON.stringify({ state: self.state, players: self.playerList, playerCoins: self.playerCoins, revealedCards: cards, turn: self.turn }));
+          self.state = GameServerState.STARTED_PROCESS_CLAIM;
+          clearTimeout(self.gameLoop);
+          setImmediate(self.processGameState);
+        }
         break;
       case GameServerState.STARTED_PROCESS_CLAIM:
+        switch(self.claimedCharacter) {
+          case GameCard.JUDGE:
+            self.playerCoins[self.characterOwner] += self.courtCoins;
+            self.courtCoins = 0;
+            break;
+          case GameCard.BISHOP:
+            var richestPlayer = -1;
+            var maxCoins = 0;
+            for (var i = self.playerCoins.length - 1; i >= 0; i--) {
+              if (self.playerCoins[i] > maxCoins) {
+                richestPlayer = i;
+                maxCoins = self.playerCoins[i];
+              }
+            };
+            self.playerCoins[self.characterOwner] += 2;
+            self.playerCoins[richestPlayer] -= 2;
+            break;
+          case GameCard.KING:
+            self.playerCoins[self.characterOwner] += 3;
+            break;
+          case GameCard.FOOL:
+            self.playerCoins[self.characterOwner] += 1;
+            self.userList[self.playerList[self.characterOwner]].connection.send({ id: 203 });
+            self.state = GameServerState.STARTED_ADDITIONAL_PROCESS;
+            clearTimeout(self.gameLoop);
+            setImmediate(self.processGameState);
+            break;
+          case GameCard.QUEEN:
+            self.playerCoins[self.characterOwner] += 2;
+            break;
+          case GameCard.THIEF:
+            var left = (self.characterOwner - 1) % self.playerList.length;
+            var right = (self.characterOwner + 1) % self.playerList.length;
+            self.playerCoins[self.characterOwner] += 2;
+            self.playerCoins[left] -= 1;
+            self.playerCoins[right] -= 1;
+            break;
+          case GameCard.WITCH:
+            break;
+          case GameCard.SPY:
+            break;
+          case GameCard.PEASANT:
+            break;
+          case GameCard.CHEAT:
+            if (self.playerCoins[self.characterOwner] >= 10) {
+              clearTimeout(self.gameLoop);
+              self.endGame(self.characterOwner);
+            }
+            break;
+          case GameCard.INQUISITOR:
+            break;
+          case GameCard.WIDOW:
+            if (self.playerCoins[self.characterOwner] <= 10) {
+              self.playerCoins[self.characterOwner] = 10;
+            }
+            break;
+        }
         break;
     }
   };
