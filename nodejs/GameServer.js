@@ -16,6 +16,7 @@ var GameServerState = Object.freeze({
   STARTED_CONTEST_CLAIM: 4,
   STARTED_PROCESS_CLAIM: 5,
   STARTED_PROCESS_STAGE_2: 6,
+  STARTED_PROCESS_STAGE_3: 7,
 });
 // TODO: Cards in own file
 var GameCard = Object.freeze({
@@ -311,21 +312,82 @@ var GameServer = function() {
               if (self.state === GameServerState.STARTED_PROCESS_STAGE_2 && msg.hasOwnProperty('target') && self.userList.hasOwnProperty(msg.target)) {
                 switch(self.claimedCharacter) {
                   case GameCard.FOOL:
-                    self.broadcast(JSON.stringify({ id: 209, target: msg.target, other: msg.other }));
+                    if (msg.hasOwnProperty('other') && self.userList.hasOwnProperty(msg.other) && msg.hasOwnProperty('fake')) {
+                      clearTimeout(self.gameLoop);
+                      self.broadcast(JSON.stringify({ id: 209, target: msg.target, other: msg.other }));
+                      if (msg.fake) {
+                        // Fake swap
+                      } else {
+                        // Real swap
+                        var temp = self.userList[msg.target].card;
+                        self.userList[msg.target].card = self.userList[msg.other].card;
+                        self.userList[msg.other].card = temp;
+                      }
+                      self.state = GameServerState.STARTED_NORMAL;
+                      setImmediate(self.processGameState);
+                    } else {
+                      con.send(JSON.stringify({ id: 103 }));
+                    }
                     break;
                   case GameCard.WITCH:
+                    clearTimeout(self.gameLoop);
                     self.broadcast(JSON.stringify({ id: 210, target: msg.target }));
                     var targetIndex = self.playerList.indexOf(msg.target);
                     var temp = self.playerCoins[self.characterOwner];
                     self.playerCoins[self.characterOwner] = self.playerCoins[targetIndex];
                     self.playerCoins[targetIndex] = temp;
+                    self.state = GameServerState.STARTED_NORMAL;
+                    setImmediate(self.processGameState);
                     break;
                   case GameCard.SPY:
+                    clearTimeout(self.gameLoop);
                     self.broadcast(JSON.stringify({ id: 211, target: msg.target }));
                     con.send(JSON.stringify({ id: 207, card: self.userList[msg.target].card }));
+                    self.spyTarget = msg.target;
+                    self.state = GameServerState.STARTED_PROCESS_STAGE_3;
+                    self.gameLoop = setTimeout(self.processGameState, 30000);
                     break;
                   case GameCard.INQUISITOR:
+                    clearTimeout(self.gameLoop);
                     self.broadcast(JSON.stringify({ id: 212, target: msg.target }));
+                    self.userList[target].connection.send({ id: 208 });
+                    self.inquired = self.playerList.indexOf(msg.target);
+                    self.state = GameServerState.STARTED_PROCESS_STAGE_3;
+                    self.gameLoop = setTimeout(self.processGameState, 30000);
+                    break;
+                  default:
+                    con.send(JSON.stringify({ id: 103 }));
+                    break;
+                }
+              } else if (self.state === GameServerState.STARTED_PROCESS_STAGE_3) {
+                switch(self.claimedCharacter) {
+                  case GameCard.SPY:
+                    if (msg.hasOwnProperty('fake')) {
+                      clearTimeout(self.gameLoop);
+                      if (msg.fake) {
+                        // Faking swap
+                      } else {
+                        // Real swap
+                        var temp = self.userList[self.spyTarget].card;
+                        self.userList[self.spyTarget].card = self.userList[self.playerList[self.characterOwner]].card;
+                        self.userList[self.playerList[self.characterOwner]].card = temp;
+                      }
+                      self.state = GameServerState.STARTED_NORMAL;
+                      setImmediate(self.processGameState);
+                    } else {
+                      con.send(JSON.stringify({ id: 103 }));
+                    }
+                    break;
+                  case GameCard.INQUISITOR:
+                    if (msg.hasOwnProperty('guess')) {
+                      if (self.userList[self.playerList[self.inquired]].card != msg.guess) {
+                        self.playerCoins[self.inquired] -= 4;
+                      }
+                      self.state = GameServerState.STARTED_NORMAL;
+                      setImmediate(self.processGameState);
+                    } else {
+                      con.send(JSON.stringify({ id: 103 }));
+                    }
                     break;
                   default:
                     con.send(JSON.stringify({ id: 103 }));
@@ -536,6 +598,7 @@ var GameServer = function() {
     self.contester = [];
     self.courtCoins = 0;
     self.doneWaiting = false;
+    self.inquired = -1;
     self.lobbyHost = '';
     self.playerCards = [];
     self.playerCoins = [];
@@ -635,6 +698,9 @@ var GameServer = function() {
           case GameCard.JUDGE:
             self.playerCoins[self.characterOwner] += self.courtCoins;
             self.courtCoins = 0;
+            self.state = GameServerState.STARTED_NORMAL;
+            clearTimeout(self.gameLoop);
+            setImmediate(self.processGameState);
             break;
           case GameCard.BISHOP:
             var richestPlayer = -1;
@@ -647,19 +713,26 @@ var GameServer = function() {
             };
             self.playerCoins[self.characterOwner] += 2;
             self.playerCoins[richestPlayer] -= 2;
+            self.state = GameServerState.STARTED_NORMAL;
+            clearTimeout(self.gameLoop);
+            setImmediate(self.processGameState);
             break;
           case GameCard.KING:
             self.playerCoins[self.characterOwner] += 3;
+            self.state = GameServerState.STARTED_NORMAL;
+            clearTimeout(self.gameLoop);
+            setImmediate(self.processGameState);
             break;
           case GameCard.FOOL:
             self.playerCoins[self.characterOwner] += 1;
             self.userList[self.playerList[self.characterOwner]].connection.send({ id: 203 });
             self.state = GameServerState.STARTED_PROCESS_STAGE_2;
-            clearTimeout(self.gameLoop);
-            setImmediate(self.processGameState);
             break;
           case GameCard.QUEEN:
             self.playerCoins[self.characterOwner] += 2;
+            self.state = GameServerState.STARTED_NORMAL;
+            clearTimeout(self.gameLoop);
+            setImmediate(self.processGameState);
             break;
           case GameCard.THIEF:
             var left = (self.characterOwner - 1) % self.playerList.length;
@@ -667,18 +740,17 @@ var GameServer = function() {
             self.playerCoins[self.characterOwner] += 2;
             self.playerCoins[left] -= 1;
             self.playerCoins[right] -= 1;
+            self.state = GameServerState.STARTED_NORMAL;
+            clearTimeout(self.gameLoop);
+            setImmediate(self.processGameState);
             break;
           case GameCard.WITCH:
             self.userList[self.playerList[self.characterOwner]].connection.send({ id: 204 });
             self.state = GameServerState.STARTED_PROCESS_STAGE_2;
-            clearTimeout(self.gameLoop);
-            setImmediate(self.processGameState);
             break;
           case GameCard.SPY:
             self.userList[self.playerList[self.characterOwner]].connection.send({ id: 205, card: self.userList[self.playerList[self.characterOwner]].card });
             self.state = GameServerState.STARTED_PROCESS_STAGE_2;
-            clearTimeout(self.gameLoop);
-            setImmediate(self.processGameState);
             break;
           case GameCard.PEASANT:
             if (self.secondPeasant != -1) {
@@ -687,27 +759,51 @@ var GameServer = function() {
             } else {
               self.playerCoins[self.characterOwner] += 1;
             }
+            self.secondPeasant = -1;
+            self.state = GameServerState.STARTED_NORMAL;
+            clearTimeout(self.gameLoop);
+            setImmediate(self.processGameState);
             break;
           case GameCard.CHEAT:
             if (self.playerCoins[self.characterOwner] >= 10) {
               clearTimeout(self.gameLoop);
               self.endGame(self.characterOwner);
             }
+            self.state = GameServerState.STARTED_NORMAL;
+            clearTimeout(self.gameLoop);
+            setImmediate(self.processGameState);
             break;
           case GameCard.INQUISITOR:
             self.userList[self.playerList[self.characterOwner]].connection.send({ id: 206 });
             self.state = GameServerState.STARTED_PROCESS_STAGE_2;
-            clearTimeout(self.gameLoop);
-            setImmediate(self.processGameState);
             break;
           case GameCard.WIDOW:
             if (self.playerCoins[self.characterOwner] <= 10) {
               self.playerCoins[self.characterOwner] = 10;
             }
+            self.state = GameServerState.STARTED_NORMAL;
+            clearTimeout(self.gameLoop);
+            setImmediate(self.processGameState);
             break;
         }
         break;
       case GameServerState.STARTED_PROCESS_STAGE_2:
+        // This only ever gets invoked if player fails to respond in 30s
+        // Card action gets skipped
+        self.state = GameServerState.STARTED_NORMAL;
+        clearTimeout(self.gameLoop);
+        setImmediate(self.processGameState);
+        break;
+      case GameServerState.STARTED_PROCESS_STAGE_3:
+        // This only ever gets invoked if player fails to respond in 30s
+        // If being inquired, lose 4 gold; otherwise card action gets skipped
+        if (self.inquired != -1) {
+          self.playerCoins[self.inquired] -= 4;
+        }
+        self.inquired = -1;
+        self.state = GameServerState.STARTED_NORMAL;
+        clearTimeout(self.gameLoop);
+        setImmediate(self.processGameState);
         break;
     }
   };
