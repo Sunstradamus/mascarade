@@ -15,4 +15,13 @@ Recv:
 200 - Player has swapped or not with target player
 201 - Player has looked at their own card
 202 - Player has claimed a character
-203 - You are the Fool, select two players to swap
+203 - Fool, select two players to swap cards or not
+204 - Witch, select player to swap fortunes
+205 - Spy, look at your card and another one; then swap or not
+206 - Inquisitor, inquire a user
+207 - Spy, other player's card
+208 - Inquisitor, you are being inquired
+209 - Fool, players being swapped
+210 - Witch, player being swapped
+211 - Spy, player being swapped
+212 - Inquisitor, player being inqired

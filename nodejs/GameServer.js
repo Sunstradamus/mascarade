@@ -15,6 +15,7 @@ var GameServerState = Object.freeze({
   STARTED_CLAIM_CHARACTER: 3,
   STARTED_CONTEST_CLAIM: 4,
   STARTED_PROCESS_CLAIM: 5,
+  STARTED_PROCESS_STAGE_2: 6,
 });
 // TODO: Cards in own file
 var GameCard = Object.freeze({
@@ -298,6 +299,57 @@ var GameServer = function() {
             con.terminate();
           }
           break;
+        // TODO: Stage 2 actions
+        case 7:
+          if (msg.username && msg.auth) {
+            // Check if user is even authenticated for our server
+            if (!self.userList.hasOwnProperty(msg.username)) {
+              con.terminate();
+              break;
+            }
+            if (self.userList[msg.username].auth === msg.auth && con === self.userList[msg.username].connection) {
+              if (self.state === GameServerState.STARTED_PROCESS_STAGE_2 && msg.hasOwnProperty('target') && self.userList.hasOwnProperty(msg.target)) {
+                switch(self.claimedCharacter) {
+                  case GameCard.FOOL:
+                    self.broadcast(JSON.stringify({ id: 209, target: msg.target, other: msg.other }));
+                    break;
+                  case GameCard.WITCH:
+                    self.broadcast(JSON.stringify({ id: 210, target: msg.target }));
+                    var targetIndex = self.playerList.indexOf(msg.target);
+                    var temp = self.playerCoins[self.characterOwner];
+                    self.playerCoins[self.characterOwner] = self.playerCoins[targetIndex];
+                    self.playerCoins[targetIndex] = temp;
+                    break;
+                  case GameCard.SPY:
+                    self.broadcast(JSON.stringify({ id: 211, target: msg.target }));
+                    con.send(JSON.stringify({ id: 207, card: self.userList[msg.target].card }));
+                    break;
+                  case GameCard.INQUISITOR:
+                    self.broadcast(JSON.stringify({ id: 212, target: msg.target }));
+                    break;
+                  default:
+                    con.send(JSON.stringify({ id: 103 }));
+                    break;
+                }
+              } else {
+                con.send(JSON.stringify({ id: 103 }));
+              }
+            } else {
+              if (self.userList[msg.username].auth === msg.auth) {
+                // Bogus connection, not the original connection
+                // NOTE: I actually don't know what happens when the browser disconnects, does it attempt to reconnect on the same socket ID?
+                con.terminate();
+              } else {
+                // Invalid auth key, someone may have tried to guess/hijack it so regen key and send back to original client
+                var authKey = Math.floor(Math.random() * 101);
+                self.userList[msg.username].auth = authKey;
+                self.userList[msg.username].connection.send(JSON.stringify({ id: 100, auth: authKey }));
+              }
+            }
+          } else {
+            con.terminate();
+          }
+          break;
         // Using 999, 998 to check connection vars & exit conditions, remove once I figure out how websockets work when clients disconnect
         case 999:
           if (con === self.userList[msg.username].connection) {
@@ -487,6 +539,7 @@ var GameServer = function() {
     self.lobbyHost = '';
     self.playerCards = [];
     self.playerCoins = [];
+    self.secondPeasant = -1;
     self.state = GameServerState.WAITING_FOR_USERS;
     self.userList = {};
 
@@ -541,6 +594,9 @@ var GameServer = function() {
             self.playerCoins[playerIndex] -= 1;
             self.courtCoins += 1;
             cards[playerIndex] = self.userList[player].card;
+            if (self.userList[player].card === GameCard.PEASANT) {
+              self.secondPeasant = playerIndex;
+            }
           }
           self.broadcast(JSON.stringify({ state: self.state, players: self.playerList, playerCoins: self.playerCoins, revealedCards: cards, turn: self.turn }));
           self.state = GameServerState.STARTED_PROCESS_CLAIM;
@@ -550,12 +606,18 @@ var GameServer = function() {
           cards[self.turn] = self.userList[self.playerList[self.turn]].card;
           self.playerCoins[self.turn] -= 1;
           self.courtCoins += 1;
+          var foundFirstPeasant = false;
           while (self.contester.length > 0) {
             var player = self.contester.pop();
             var playerIndex = self.playerList.indexOf(user);
             cards[playerIndex] = self.userList[player].card;
             if (self.userList[player].card === self.claimedCharacter) {
-              self.characterOwner = playerIndex;
+              if (foundFirstPeasant) {
+                self.secondPeasant = playerIndex;
+              } else {
+                self.characterOwner = playerIndex;
+                foundFirstPeasant = true;
+              }
             } else {
               self.courtCoins += 1;
               self.playerCoins[playerIndex] -= 1;
@@ -567,6 +629,7 @@ var GameServer = function() {
           setImmediate(self.processGameState);
         }
         break;
+      // TODO: Finish turn
       case GameServerState.STARTED_PROCESS_CLAIM:
         switch(self.claimedCharacter) {
           case GameCard.JUDGE:
@@ -591,7 +654,7 @@ var GameServer = function() {
           case GameCard.FOOL:
             self.playerCoins[self.characterOwner] += 1;
             self.userList[self.playerList[self.characterOwner]].connection.send({ id: 203 });
-            self.state = GameServerState.STARTED_ADDITIONAL_PROCESS;
+            self.state = GameServerState.STARTED_PROCESS_STAGE_2;
             clearTimeout(self.gameLoop);
             setImmediate(self.processGameState);
             break;
@@ -606,10 +669,24 @@ var GameServer = function() {
             self.playerCoins[right] -= 1;
             break;
           case GameCard.WITCH:
+            self.userList[self.playerList[self.characterOwner]].connection.send({ id: 204 });
+            self.state = GameServerState.STARTED_PROCESS_STAGE_2;
+            clearTimeout(self.gameLoop);
+            setImmediate(self.processGameState);
             break;
           case GameCard.SPY:
+            self.userList[self.playerList[self.characterOwner]].connection.send({ id: 205, card: self.userList[self.playerList[self.characterOwner]].card });
+            self.state = GameServerState.STARTED_PROCESS_STAGE_2;
+            clearTimeout(self.gameLoop);
+            setImmediate(self.processGameState);
             break;
           case GameCard.PEASANT:
+            if (self.secondPeasant != -1) {
+              self.playerCoins[self.characterOwner] += 2;
+              self.playerCoins[self.secondPeasant] += 2;
+            } else {
+              self.playerCoins[self.characterOwner] += 1;
+            }
             break;
           case GameCard.CHEAT:
             if (self.playerCoins[self.characterOwner] >= 10) {
@@ -618,6 +695,10 @@ var GameServer = function() {
             }
             break;
           case GameCard.INQUISITOR:
+            self.userList[self.playerList[self.characterOwner]].connection.send({ id: 206 });
+            self.state = GameServerState.STARTED_PROCESS_STAGE_2;
+            clearTimeout(self.gameLoop);
+            setImmediate(self.processGameState);
             break;
           case GameCard.WIDOW:
             if (self.playerCoins[self.characterOwner] <= 10) {
@@ -625,6 +706,8 @@ var GameServer = function() {
             }
             break;
         }
+        break;
+      case GameServerState.STARTED_PROCESS_STAGE_2:
         break;
     }
   };

@@ -5,3 +5,4 @@ Recv:
 4 - Leave lobby
 5 - Player's action
 6 - Contest character
+7 - Character action player input
