@@ -383,6 +383,7 @@ var GameServer = function() {
                       if (self.userList[self.playerList[self.inquired]].card != msg.guess) {
                         self.playerCoins[self.inquired] -= 4;
                       }
+                      self.inquired = -1;
                       self.state = GameServerState.STARTED_NORMAL;
                       setImmediate(self.processGameState);
                     } else {
@@ -600,9 +601,10 @@ var GameServer = function() {
     self.doneWaiting = false;
     self.inquired = -1;
     self.lobbyHost = '';
-    self.playerCards = [];
+    self.playerCards = []; // This exists only as a reference to check what cards are in the game, it is NOT updated for swaps, etc.
     self.playerCoins = [];
     self.secondPeasant = -1;
+    self.spyTarget = '';
     self.state = GameServerState.WAITING_FOR_USERS;
     self.userList = {};
 
