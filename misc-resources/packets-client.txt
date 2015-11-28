@@ -1,5 +1,5 @@
 Recv:
-1 - Authenticate
+1 - Authentication requested
 2 - Authentication approved
 3
 4
