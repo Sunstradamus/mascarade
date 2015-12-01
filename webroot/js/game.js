@@ -77,9 +77,17 @@ var Box = React.createClass({
   startGame: function() {
     this.state.websocket.send(JSON.stringify({ id: 3, username: this.props.username, token: this.props.token, auth: this.state.auth }));
   },
+  
+  handleChange: function(e) {
+    this.setState({ customMessage: e.target.value });
+  },
+  
+  submitCustom: function(e) {
+    e.preventDefault();
+    this.state.websocket.send( this.state.customMessage );    
+  },
 
   render: function render() {
-    console.log(this.state.entries);
     return React.createElement(
       'div',
       { className: 'container game-area' },
@@ -90,8 +98,21 @@ var Box = React.createClass({
         coins: this.state.playerCoins }),
       React.createElement(
         'a',
-        { href: '#', onClick: this.startGame },
-        '"start game"'
+        { className:'btn btn-info', href: '#', onClick: this.startGame },
+        'start game'
+      ),
+      React.createElement(
+        'br',
+        {}
+      ),
+      React.createElement(
+        'input',
+        { onChange: this.handleChange }
+      ),
+      React.createElement(
+        'a',
+        { className:'btn btn-default', href: '#', onClick: this.submitCustom },
+        'submit custom message'
       )
     );
   }
