@@ -1,0 +1,39 @@
+.lobbies-box {
+  border: 5px solid #ffcc00;
+  background: #4c0099;
+  background: rgba(76, 0, 153, 0.4);
+  margin-top: 2em;
+  height: 60vh;
+  padding: 10px;
+}
+
+#new-lobby {
+  position: relative;
+  float: right;
+  bottom: 0px;
+  right: 0px;
+}
+
+.lobbies {
+  height: 80%;
+  background: #2c0079;
+  background: rgba(56, 0, 133, 0.4);
+  overflow-y: scroll;
+  margin: 10px;
+  border: 5px solid #ffcc00;
+}
+
+.lobby {
+  margin: 0.5em;
+  border: 1px solid #ffcc00;
+  background: #000000;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 0.5em;
+  border-radius: 3px;
+  color: #fff;
+}
+
+.lobby:hover {
+  color: #fff;
+  background: rgba(0, 0, 0, 0.5);
+}
