@@ -63,6 +63,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <![endif]-->
   </head>
   <body>
+    <div id="background">
+      <img src="images/background.jpg" class="stretch" alt="" />
+    </div>
+    <div class="logo" >
+      <img src="images/smallLogo.png" alt="mascarade-logo" />
+    </div>
     <div id="container">
       <div id="content">
         <form class="form-registration" method="post" action="/register.php">

@@ -48,30 +48,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <![endif]-->
   </head>
   <body>
+    <div id="background">
+      <img src="images/background.jpg" class="stretch" alt="" />
+    </div>
+    <div class="logo" >
+      <img src="images/smallLogo.png" alt="mascarade-logo" />
+    </div>
     <div id="container">
+ 
       <div id="content">
-        <form class="form-signin" method="post" action="/login.php">
-          <h2 class="form-signin-heading">Please sign in</h2>
-<?PHP
-if (isset($error_msg)):
-?>
-          <div class="alert alert-danger" role="alert"><?PHP html($error_msg); ?></div>
-<?PHP
-endif;
-?>
-          <label for="inputUsername" class="sr-only">Username</label>
-          <input type="text" id="inputUsername" name="username" class="form-control" placeholder="Username" required autofocus>
-          <label for="inputPassword" class="sr-only">Password</label>
-          <input type="password" id="inputPassword" name="password" class="form-control" placeholder="Password" required>
-          <div class="row">
-            <div class="col-xs-6">
-              <a href="/register.php" class="btn btn-lg btn-info btn-block">Register</a>
+
+        <div class="signin" >
+          <form class="form-signin" method="post" action="/login.php">
+            <h2 class="form-signin-heading">Please sign in</h2>
+  <?PHP
+  if (isset($error_msg)):
+  ?>
+            <div class="alert alert-danger" role="alert"><?PHP html($error_msg); ?></div>
+  <?PHP
+  endif;
+  ?>
+            <label for="inputUsername" class="sr-only">Username</label>
+            <input type="text" id="inputUsername" name="username" class="form-control" placeholder="Username" required autofocus>
+            <label for="inputPassword" class="sr-only">Password</label>
+            <input type="password" id="inputPassword" name="password" class="form-control" placeholder="Password" required>
+            <div class="row">
+              <div class="col-xs-6">
+                <a href="/register.php" class="btn btn-lg btn-info btn-block">Register</a>
+              </div>
+              <div class="col-xs-6">
+                <button class="btn btn-lg btn-primary btn-block" type="submit">Sign in</button>
+              </div>
             </div>
-            <div class="col-xs-6">
-              <button class="btn btn-lg btn-primary btn-block" type="submit">Sign in</button>
-            </div>
-          </div>
-        </form>
+          </form>
+        </div>
       </div>
     </div>
 
