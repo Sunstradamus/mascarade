@@ -43,7 +43,6 @@ switch (mode) {
               }
               break;
             case '/lobbies':
-              console.log("hey");
               res.write("jsonCallback(" + JSON.stringify(lobbies) + ");");
               res.end();
             default:
