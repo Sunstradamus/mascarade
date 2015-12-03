@@ -118,3 +118,7 @@
   border-radius: 1px;
   cursor: pointer;
 }
+
+.claim-card {
+  cursor: pointer;
+}

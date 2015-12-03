@@ -464,13 +464,18 @@ var ActionArea = React.createClass({
     this.setState({ pickingClaim: false });
   },
   
+  cancelClaim: function() {
+    this.setState({ pickingClaim: false });
+  },
+  
   render: function render() {
     
     var cardFile = (this.props.card != null) ? GameCard[this.props.card] : "cardBack";
     var buttonsArea;
     
     if (this.state.pickingClaim) {
-      buttonsArea = React.createElement( ClaimArea, { sendClaim: this.sendClaim });
+      buttonsArea = React.createElement( ClaimArea, { sendClaim: this.sendClaim,
+                                                      cancelClaim: this.cancelClaim });
     }
     
     else {
