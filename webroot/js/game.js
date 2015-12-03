@@ -20,7 +20,8 @@ var Box = React.createClass({
       entries: [],
       gameState: 0,
       myTurn: false,
-      needTarget: false
+      needTarget: false,
+      middle: []
     };
   },
 
@@ -60,9 +61,10 @@ var Box = React.createClass({
       
       this.setState({ 
         gameState: msg['state'],
-        playerCards: msg.hasOwnProperty('playerCards') ? msg['playerCards'] : this.state.playerCards,
+        playerCards: msg.hasOwnProperty('playerCards') ? msg['playerCards'] : [],
         players: msg.hasOwnProperty('players') ? msg['players'] : this.state.players,
         playerCoins: msg.hasOwnProperty('playerCoins') ? msg['playerCoins'] : this.state.playerCoins,
+        middle: msg.hasOwnProperty('middle') ? msg['middle'] : [],
         turn: msg['turn'],
       });
     }
@@ -132,7 +134,7 @@ var Box = React.createClass({
         case 200:
           // Player has swapped or not with target player
           this.setState(function (prevState, currProps) {
-            prevState.entries.push({ 'private': false, 'message': prevState.players[prevState.turn] + " might've swapped with " + prevState.players[msg['target']] });
+            prevState.entries.push({ 'private': false, 'message': prevState.players[prevState.turn] + " might've swapped with " + msg['target'] });
             return { entries: prevState.entries };
           });
           break;
@@ -215,6 +217,7 @@ var Box = React.createClass({
       React.createElement(GameLog, { entries: this.state.entries }),
       React.createElement(GameArena, { 
         // parameters
+        middle: this.state.middle,
         gameState: this.state.gameState,
         playerName: this.props.username,
         players: this.state.players,
@@ -281,6 +284,7 @@ var GameArena = React.createClass({
         playerName: this.props.playerName,
         playerCards: this.props.playerCards,
         middle: this.props.middle,
+        gameState: this.props.gameState,
         needTarget: this.props.needTarget,
         sendActionWithTarget: this.props.sendActionWithTarget }),
       React.createElement(ActionArea, { 
@@ -332,14 +336,28 @@ var CardArea = React.createClass({
         topCards.push({ name: this.props.players[i],
                         coins: this.props.playerCoins[i],
                         card: this.props.playerCards[i],
-                        index: i });
+                        index: this.props.players[i] });
         j++;
       } else {
-        botCards.push({ name: this.props.players[i], coins: this.props.playerCoins[i] });
+        botCards.push({ name: this.props.players[i],
+                        coins: this.props.playerCoins[i],
+                        card: this.props.playerCards[i],
+                        index: this.props.players[i] });
         j++;
       }
     }
 
+    if (this.props.players.length < 6 && this.props.gameState != 0) {
+      for( var j = 0 ; j < (6 - this.props.players.length) ; j++ ) {
+        botCards.push({ name: "middlecard" + j.toString(),
+                        coins: 0,
+                        card: this.props.middle[j],
+                        index: j});
+      
+      }
+      
+    }
+    
     return React.createElement(
       'div',
       { className: 'row card-area' },
