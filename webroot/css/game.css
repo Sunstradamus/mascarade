@@ -23,6 +23,7 @@
   margin-left: auto;
   margin-right: auto;
   text-align: center;
+  cursor: pointer;
 }
 
 .buttons-area {
@@ -88,7 +89,7 @@
   background: #4c0099;
   background: rgba(26, 0, 63, 0.4);
   position: relative;
-  overflow-y: scroll;
+  overflow-y: hidden;
 }
 
 .game-arena {
@@ -106,4 +107,14 @@
 .entry {
   border-top: 1px solid #fff;
   padding: 0.5em 5%;
+}
+
+.private {
+  color: #90F;
+}
+
+.need-target {
+  border: 2px solid #fff;
+  border-radius: 1px;
+  cursor: pointer;
 }
