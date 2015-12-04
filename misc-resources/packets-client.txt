@@ -4,6 +4,10 @@ Recv:
 3
 4
 5 - Turn notification & actions permitted
+6
+7
+8 - Authentication rejected
+9 - Could not authenticate with Game Coordinator
 
 100 - Regenerated authentication key
 101 - Insufficient users to start game

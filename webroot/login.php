@@ -21,6 +21,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $_SESSION['user']['id'] = $id;
         $_SESSION['user']['username'] = $username;
         $_SESSION['user']['hash'] = md5($id.$_SERVER['HTTP_USER_AGENT']);
+        generate_user_token();
         header("Location: ".BASE_URL);
       } else {
         // Invalid

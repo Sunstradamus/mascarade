@@ -8,7 +8,7 @@ var Box = React.createClass({
 
   // ----------------------------------------------------------- getDefaultProps
   getDefaultProps: function getDefaultProps() {
-    return { username: 'user', token: 'lool' };
+    return { username: 'user', token: TOKEN };
   },
   
   // ----------------------------------------------------------- getInitialState
@@ -628,5 +628,5 @@ function startTimer(duration) {
 }
 
 $(document).ready(function () {
-  ReactDOM.render(React.createElement(Box, { 'username': 'landon' }), document.getElementById('react-area'));
+  ReactDOM.render(React.createElement(Box, { 'username': USERNAME }), document.getElementById('react-area'));
 });

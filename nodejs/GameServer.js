@@ -5,6 +5,7 @@ if (process.argv.length != 4) {
 var lobbyId = process.argv[2],
     lobbyPort = process.argv[3],
     request = require('http').request,
+    getReq = require('http').get,
     WebSocketServer = require('ws').Server,
     wss = new WebSocketServer({ port: lobbyPort, path: '/'+lobbyId });
 // TODO: Refactor state enum into its own file
@@ -69,16 +70,32 @@ var GameServer = function() {
         case 1:
           // Check if packet has valid properties for the declared ID
           if (msg.username && msg.token) {
-            // TODO: Verify token against server before approving connection
-            // Generate arbitrary number and assign it as an authentication key for this "session"
-            // Not very secure, but will work for now; security improvement would be regenerating key upon every received message
-            // and echoing it back (aka browser sessions/cookies)
-            var authKey = Math.floor(Math.random() * 101);
-            if (self.lobbyHost === '') {
-              self.lobbyHost = msg.username;
-            }
-            self.userList[msg.username] = { connection: con, auth: authKey };
-            con.send(JSON.stringify({ id: 2, auth: authKey }));
+            // TODO: Figure out how to grab GC hostname
+            getReq("http://localhost:8000/user_token?username="+msg.username+"&id="+lobbyId, function(res) {
+              if (res.statusCode === 200) {
+                var body = '';
+                res.on('data', function(data) {
+                  body += data;
+                });
+                res.on('end', function() {
+                  var get = JSON.parse(body);
+                  if (msg.token === get.token) {
+                    var authKey = Math.floor(Math.random() * self.keyLen);
+                    if (self.lobbyHost === '') {
+                      self.lobbyHost = msg.username;
+                    }
+                    self.userList[msg.username] = { connection: con, auth: authKey };
+                    con.send(JSON.stringify({ id: 2, auth: authKey }));
+                  } else {
+                    con.send(JSON.stringify({ id: 8 }));
+                  }
+                });
+              } else {
+                con.send(JSON.stringify({ id: 8 }));
+              }
+            }).on('error', function(e) {
+              con.send(JSON.stringify({ id: 9 }));
+            });
           } else {
             con.terminate();
           }
@@ -100,7 +117,7 @@ var GameServer = function() {
                 con.terminate();
               } else {
                 // Invalid auth key, someone may have tried to guess/hijack it so regen key and send back to original client
-                var authKey = Math.floor(Math.random() * 101);
+                var authKey = Math.floor(Math.random() * self.keyLen);
                 self.userList[msg.username].auth = authKey;
                 self.userList[msg.username].connection.send(JSON.stringify({ id: 100, auth: authKey }));
               }
@@ -136,7 +153,7 @@ var GameServer = function() {
                 con.terminate();
               } else {
                 // Invalid auth key, someone may have tried to guess/hijack it so regen key and send back to original client
-                var authKey = Math.floor(Math.random() * 101);
+                var authKey = Math.floor(Math.random() * self.keyLen);
                 self.userList[msg.username].auth = authKey;
                 self.userList[msg.username].connection.send(JSON.stringify({ id: 100, auth: authKey }));
               }
@@ -253,7 +270,7 @@ var GameServer = function() {
                 con.terminate();
               } else {
                 // Invalid auth key, someone may have tried to guess/hijack it so regen key and send back to original client
-                var authKey = Math.floor(Math.random() * 101);
+                var authKey = Math.floor(Math.random() * self.keyLen);
                 self.userList[msg.username].auth = authKey;
                 self.userList[msg.username].connection.send(JSON.stringify({ id: 100, auth: authKey }));
               }
@@ -291,7 +308,7 @@ var GameServer = function() {
                 con.terminate();
               } else {
                 // Invalid auth key, someone may have tried to guess/hijack it so regen key and send back to original client
-                var authKey = Math.floor(Math.random() * 101);
+                var authKey = Math.floor(Math.random() * self.keyLen);
                 self.userList[msg.username].auth = authKey;
                 self.userList[msg.username].connection.send(JSON.stringify({ id: 100, auth: authKey }));
               }
@@ -404,7 +421,7 @@ var GameServer = function() {
                 con.terminate();
               } else {
                 // Invalid auth key, someone may have tried to guess/hijack it so regen key and send back to original client
-                var authKey = Math.floor(Math.random() * 101);
+                var authKey = Math.floor(Math.random() * self.keyLen);
                 self.userList[msg.username].auth = authKey;
                 self.userList[msg.username].connection.send(JSON.stringify({ id: 100, auth: authKey }));
               }
@@ -600,6 +617,7 @@ var GameServer = function() {
     self.courtCoins = 0;
     self.doneWaiting = false;
     self.inquired = -1;
+    self.keyLen = 1001;
     self.lobbyHost = '';
     self.playerCards = []; // This exists only as a reference to check what cards are in the game, it is NOT updated for swaps, etc.
     self.playerCoins = [];

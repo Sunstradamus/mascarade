@@ -27,6 +27,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['user']['id'] = $mysqli->insert_id;
             $_SESSION['user']['username'] = $_POST['username'];
             $_SESSION['user']['hash'] = md5($mysqli->insert_id.$_SERVER['HTTP_USER_AGENT']);
+            generate_user_token();
             header("Location: ".BASE_URL);
           } else {
             $stmt->close();
