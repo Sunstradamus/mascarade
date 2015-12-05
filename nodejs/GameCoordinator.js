@@ -51,7 +51,7 @@ switch (mode) {
               }
               spawn('node', ['/home/vagrant/project/nodejs/GameServer.js', id, basePort], { detached: true });
               lobbies[id] = { state: 0, port: basePort };
-              res.write("jsonCallback(" + JSON.stringify({ id: id, state: 0, port: basePort }) + ");");
+              res.write(JSON.stringify({ id: id, state: 0, port: basePort }));
               res.end();
               basePort += 1;
               if (basePort > 9080) {
@@ -59,7 +59,7 @@ switch (mode) {
               }
               break;
             case '/lobbies':
-              res.write("jsonCallback(" + JSON.stringify(lobbies) + ");");
+              res.write(JSON.stringify(lobbies));
               res.end();
             default:
               res.statusCode = 400;
