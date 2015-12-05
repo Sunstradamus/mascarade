@@ -85,7 +85,7 @@ switch (mode) {
                     userTokens[url.query.username] = post.token;
                     res.statusCode = 200;
                   } else {
-                    res.statusCode = 400;
+                    res.statusCode = 403;
                   }
                 });
               } else {
@@ -113,6 +113,19 @@ switch (mode) {
                 res.statusCode = 400;
               }
               res.end();
+              break;
+            case '/user_token':
+              if (url.query.username && url.query.signature) {
+                var hash = hmac('sha512', SECRET_KEY).update("delete").digest('hex');
+                if (url.query.signature === hash) {
+                  delete userTokens[url.query.username];
+                  res.statusCode = 200;
+                } else {
+                  res.statusCode = 403;
+                }
+              } else {
+                res.statusCode = 400;
+              }
               break;
             default:
               res.statusCode = 400;

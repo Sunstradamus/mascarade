@@ -2,6 +2,7 @@
 require_once '/home/vagrant/project/phpcore/core.inc.php';
 authenticate_user();
 
+delete_user_token();
 $_SESSION = array();
 if (ini_get("session.use_cookies")) {
     $params = session_get_cookie_params();
