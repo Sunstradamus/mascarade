@@ -422,6 +422,7 @@ var GameServer = function() {
                     if (msg.hasOwnProperty('guess')) {
                       if (self.userList[self.playerList[self.inquired]].card != msg.guess) {
                         self.playerCoins[self.inquired] -= 4;
+                        self.playerCoins[self.characterOwner] += 4;
                       }
                       self.inquired = -1;
                       self.state = GameServerState.STARTED_NORMAL;
@@ -515,10 +516,13 @@ var GameServer = function() {
     // If the game did end, select the winner
     // Cheat has its own win check
     if (gameOver) {
+      // If ties is empty but the gameOver flag is set, a player hit < 0 coins so the greatest # of coins wins
       if (ties.length === 0) {
         self.endGame(playerIndex);
+      // A person > 13 coins won the game
       } else if (ties.length === 1) {
         self.endGame(ties[0]);
+      // Multiple people with > 13 coins win the game
       } else {
         self.endGame(ties);
       }
@@ -632,24 +636,26 @@ var GameServer = function() {
   }
 
   self.initialize = function() {
-    self.centerCards;
-    self.gameLoop;
-    self.playerList;
+    self.centerCards; // Array that holds the center cards on the table, index 0 = left, 1 = right (Only used when < 6 players)
+    self.gameLoop; // Timeout object that holds the game loop
+    self.playerList; // Array where index = player ID of all players' usernames
     self.characterOwner = -1;
     self.claimedCharacter = -1;
     self.contestCounter = 1; // Init val is 1 so the card claimer doesn't need to reply with a contest packet
-    self.contester = [];
+    self.contester = []; // Array of players that contest the claim
     self.courtCoins = 0;
     self.doneWaiting = false;
     self.enableTurnCheck = false;
-    self.inquired = -1;
-    self.keyLen = 1001;
-    self.lobbyHost = '';
+    self.forceSwapCount = 0;
+    self.inquired = -1; // ID of player that is being inquired
+    self.keyLen = 1001; // Range X of authKeys where x = (max - min) + min
+    self.lobbyHost = ''; // Username of the lobby host (only used to start game)
     self.playerCards = []; // This exists only as a reference to check what cards are in the game, it is NOT updated for swaps, etc.
-    self.playerCoins = [];
+    self.playerCoins = []; // Updated array where index = player ID of all players' coin count
     self.secondPeasant = -1;
-    self.spyTarget = '';
+    self.spyTarget = ''; // Username of the target of the spy card
     self.state = GameServerState.WAITING_FOR_USERS;
+    self.turn = -1; // Turn initialized to -1 so that advanceTurn will increment it to 0 and loop from 0 -> playerList.length-1
     self.userList = {};
 
     /*process.on('uncaughtException', function(err) {
@@ -847,8 +853,10 @@ var GameServer = function() {
         // If being inquired, lose 4 gold; otherwise card action gets skipped
         if (self.inquired != -1) {
           self.playerCoins[self.inquired] -= 4;
+          self.playerCoins[self.characterOwner] += 4;
         }
         self.inquired = -1;
+        self.characterOwner = -1;
         self.state = GameServerState.STARTED_NORMAL;
         clearTimeout(self.gameLoop);
         setImmediate(self.processGameState);
