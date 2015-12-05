@@ -10,3 +10,6 @@ What is in progress:
   - Front end reactjs code
   - Proper login/lobby pages
   - Last pieces of game server (claiming actions)
+
+Premade accounts:
+testuser:password

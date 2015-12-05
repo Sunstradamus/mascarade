@@ -1,9 +1,10 @@
-if (process.argv.length != 4) {
-    console.log("Usage: node GameServer.js [lobby-id] [port]");
+if (process.argv.length != 5) {
+    console.log("Usage: node GameServer.js [lobby-id] [port] [GC Auth Key]");
     return;
 }
 var lobbyId = process.argv[2],
     lobbyPort = process.argv[3],
+    lobbyKey = process.argv[4],
     request = require('http').request,
     getReq = require('http').get,
     WebSocketServer = require('ws').Server,
@@ -71,7 +72,7 @@ var GameServer = function() {
           // Check if packet has valid properties for the declared ID
           if (msg.username && msg.token) {
             // TODO: Figure out how to grab GC hostname
-            getReq("http://localhost:8000/user_token?username="+msg.username+"&id="+lobbyId, function(res) {
+            getReq("http://localhost:8000/user_token?username="+msg.username+"&id="+lobbyId+"&key="+lobbyKey, function(res) {
               if (res.statusCode === 200) {
                 var body = '';
                 res.on('data', function(data) {
