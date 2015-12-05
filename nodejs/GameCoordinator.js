@@ -4,6 +4,7 @@ if (process.argv.length != 3) {
 }
 var mode = process.argv[2];
 var SECRET_KEY = "9bbe65e4e477b13ca45b45f35cd4222e1c475b6dbc1604e9caaadd26e2e6179e";
+var LOBBY_KEY = "e2544fce5d32505719ee76d6ed53b293775044fcad108ec63460bd6a19b5007b";
 switch (mode) {
   // Run as master GC server for lobby listings
   case 'master':
@@ -30,9 +31,9 @@ switch (mode) {
         case 'GET':
           switch(url.pathname) {
             case '/user_token':
-              if (url.query.username && url.query.id) {
-                // TODO: Generate & check private symmetric key for lobby
-                if (lobbies.hasOwnProperty(url.query.id) && userTokens.hasOwnProperty(url.query.username)) {
+              if (url.query.username && url.query.id && url.query.key) {
+                // TODO: Generate unique symmetric key for lobby
+                if (lobbies.hasOwnProperty(url.query.id) && userTokens.hasOwnProperty(url.query.username) && url.query.key === LOBBY_KEY) {
                   res.write(JSON.stringify({ token: userTokens[url.query.username] }));
                   delete userTokens[url.query.username];
                 } else {
@@ -49,7 +50,7 @@ switch (mode) {
               for (var i = 0; i < 5; i++) {
                 id += allowed.charAt(Math.floor(Math.random() * 36));
               }
-              spawn('node', ['/home/vagrant/project/nodejs/GameServer.js', id, basePort], { detached: true });
+              spawn('node', ['/home/vagrant/project/nodejs/GameServer.js', id, basePort, LOBBY_KEY], { detached: true });
               lobbies[id] = { state: 0, port: basePort };
               res.write(JSON.stringify({ id: id, state: 0, port: basePort }));
               res.end();
@@ -85,7 +86,7 @@ switch (mode) {
                     userTokens[url.query.username] = post.token;
                     res.statusCode = 200;
                   } else {
-                    res.statusCode = 400;
+                    res.statusCode = 403;
                   }
                 });
               } else {
@@ -108,6 +109,20 @@ switch (mode) {
                   res.statusCode = 200;
                 } else {
                   res.statusCode = 404;
+                }
+              } else {
+                res.statusCode = 400;
+              }
+              res.end();
+              break;
+            case '/user_token':
+              if (url.query.username && url.query.signature) {
+                var hash = hmac('sha512', SECRET_KEY).update("delete").digest('hex');
+                if (url.query.signature === hash) {
+                  delete userTokens[url.query.username];
+                  res.statusCode = 200;
+                } else {
+                  res.statusCode = 403;
                 }
               } else {
                 res.statusCode = 400;

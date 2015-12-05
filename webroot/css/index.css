@@ -22,7 +22,7 @@
   height: 80%;
   background: #2c0079;
   background: rgba(56, 0, 133, 0.4);
-  overflow-y: scroll;
+  overflow-y: auto;
   margin: 10px;
   border: 5px solid #ffcc00;
 }
@@ -40,4 +40,12 @@
 .lobby:hover {
   color: #fff;
   background: rgba(0, 0, 0, 0.5);
+}
+
+#alert-disconnected {
+  background-color: red;
+  position: fixed;
+  top: 0;
+  width: 100%;
+  text-align: center;
 }

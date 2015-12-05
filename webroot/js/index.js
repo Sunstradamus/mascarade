@@ -20,6 +20,7 @@ $("document").ready(function() {
 
   function getLobbies() {
     $(".lobbies").html("");
+    $("#alert-disconnected").html("");
     $.ajax({
       method: "GET",
       url: 'http://' + window.location.hostname + ':8001/lobbies',
@@ -31,7 +32,11 @@ $("document").ready(function() {
         }
       },
       error: function() {
-        $("#new-lobby").prop("disabled");
+        document.getElementById("new-lobby").setAttribute("disabled", "true");
+        var alert = document.createElement('div');
+        alert.id = 'alert-disconnected';
+        alert.textContent = 'Connection to Game Coordinator Lost; Searching for Game Coordinator...';
+        document.body.appendChild(alert);
       },
     });
   }

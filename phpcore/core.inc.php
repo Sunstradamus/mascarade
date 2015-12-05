@@ -14,6 +14,16 @@ function authenticate_user() {
 	}
 }
 
+function delete_user_token() {
+	$signature = hash_hmac('sha512', 'delete', SECRET_KEY);
+	$ch = curl_init();
+	curl_setopt($ch, CURLOPT_URL, GC_URL."/user_token?username=".$_SESSION['user']['username']."&signature=".$signature);
+	curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "DELETE");
+	curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+	curl_exec($ch);
+	curl_close($ch);
+}
+
 function generate_user_token() {
 	$token = hash('sha512', make_random_string());
 	$signature = hash_hmac('sha512', $token, SECRET_KEY);

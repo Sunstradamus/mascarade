@@ -6,44 +6,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($mysqli->connect_error) {
       throw new Exception('MySQL Error: '.$mysqli->connect_error);
     }
-  }
 
-  if ($_POST['password'] === $_POST['verification']) {
-    if (mb_strlen($_POST['password']) > 5) {
-      if (mb_strlen($_POST['username']) > 5 && mb_strlen($_POST['username']) < 21) {
-        if (ctype_alnum($_POST['username'])) {
-          $username = $_POST['username'];
-          $stmt = $mysqli->prepare("SELECT `id`, `username`, `password` FROM `users` WHERE `username`=?");
-          $stmt->bind_param("s", $username);
-          $stmt->execute();
-          if ($stmt->fetch() === NULL) {
-            $stmt->close();
-            $stmt = $mysqli->prepare("INSERT INTO `users`(`username`, `password`) VALUES (?, ?)");
-            $stmt->bind_param("ss", $username, $password);
+    if ($_POST['password'] === $_POST['verification']) {
+      if (mb_strlen($_POST['password']) > 5) {
+        if (mb_strlen($_POST['username']) > 5 && mb_strlen($_POST['username']) < 21) {
+          if (ctype_alnum($_POST['username'])) {
             $username = $_POST['username'];
-            $password = password_hash($_POST['password'], PASSWORD_BCRYPT);
+            $stmt = $mysqli->prepare("SELECT `id`, `username`, `password` FROM `users` WHERE `username`=?");
+            $stmt->bind_param("s", $username);
             $stmt->execute();
+            if ($stmt->fetch() === NULL) {
+              $stmt->close();
+              $stmt = $mysqli->prepare("INSERT INTO `users`(`username`, `password`) VALUES (?, ?)");
+              $stmt->bind_param("ss", $username, $password);
+              $username = $_POST['username'];
+              $password = password_hash($_POST['password'], PASSWORD_BCRYPT);
+              $stmt->execute();
 
-            $_SESSION['user']['id'] = $mysqli->insert_id;
-            $_SESSION['user']['username'] = $_POST['username'];
-            $_SESSION['user']['hash'] = md5($mysqli->insert_id.$_SERVER['HTTP_USER_AGENT']);
-            generate_user_token();
-            header("Location: ".BASE_URL);
+              $_SESSION['user']['id'] = $mysqli->insert_id;
+              $_SESSION['user']['username'] = $_POST['username'];
+              $_SESSION['user']['hash'] = md5($mysqli->insert_id.$_SERVER['HTTP_USER_AGENT']);
+              generate_user_token();
+              header("Location: ".BASE_URL);
+            } else {
+              $stmt->close();
+              $error_msg = 'Username already in use';
+            }
           } else {
-            $stmt->close();
-            $error_msg = 'Username already in use';
+            $error_msg = 'Username can only consist of alphanumeric characters';
           }
         } else {
-          $error_msg = 'Username can only consist of alphanumeric characters';
+          $error_msg = 'Bad username length';
         }
       } else {
-        $error_msg = 'Bad username length';
+        $error_msg = 'Password too short';
       }
     } else {
-      $error_msg = 'Password too short';
+      $error_msg = 'Passwords did not match';
     }
-  } else {
-    $error_msg = 'Passwords did not match';
   }
 }
 ?>
