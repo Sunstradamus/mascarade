@@ -8,12 +8,13 @@ var Box = React.createClass({
 
   // ----------------------------------------------------------- getDefaultProps
   getDefaultProps: function getDefaultProps() {
-    return { username: 'user', token: TOKEN };
+    return { username: 'user' };
   },
   
   // ----------------------------------------------------------- getInitialState
   getInitialState: function getInitialState() {
     return {
+      token: this.props.token,
       players: [],
       playerCards: [],
       playerCoins:[],
@@ -47,6 +48,7 @@ var Box = React.createClass({
 
   onClose: function onClose(e) {
     console.log("websocket closed");
+    window.location.href = '/';
   },
 
   onError: function onError(e) {
@@ -72,13 +74,15 @@ var Box = React.createClass({
       
       switch (msg['id']) {
         case 1:
-          console.log('authentication requested');
           // Authentication requested     
-          this.state.websocket.send(JSON.stringify({ id: 1, username: this.props.username, token: this.props.token }));
+          this.state.websocket.send(JSON.stringify({ id: 1, username: this.props.username, token: this.state.token }));
           break;
         case 2:
           // Authentication approved
-          console.log("authentication approved");
+          this.setState(function (prevState, currProps) {
+            prevState.entries.push({ 'private': true, 'message': "Connected to game lobby" });
+            return { entries: prevState.entries, myTurn: true };
+          });
           this.setState({ auth: msg['auth'] });
           break;
         case 5:
@@ -87,6 +91,31 @@ var Box = React.createClass({
             prevState.entries.push({ 'private': true, 'message': "It's your turn!" });
             return { entries: prevState.entries, myTurn: true };
           });
+          break;
+        case 8:
+          // Authentication rejected
+          this.setState(function (prevState, currProps) {
+            prevState.entries.push({ 'private': true, 'message': "Could not determine authenticity of client. Retrying..." });
+            return { entries: prevState.entries, myTurn: true };
+          });
+          var self = this; // meta
+          $.ajax({
+            method: "GET",
+            url: "/new-token.php",
+            success: function(data) {
+              msg = JSON.parse(data);
+              if( msg["token"] == "" ) {
+                self.setState(function (prevState, currProps) {
+                  prevState.entries.push({ 'private': true, 'message': "Authentication failed. Cannot join lobby." });
+                  return { entries: prevState.entries, myTurn: true };
+                });
+              }
+              else {
+                self.setState({ token: msg["token"]});
+                self.state.websocket.send(JSON.stringify({ id: 1, username: self.props.username, token: self.state.token }));
+              }
+            },
+          });          
           break;
         case 100:
           // Regenerated authentication key
@@ -165,7 +194,7 @@ var Box = React.createClass({
   
   // --------------------------------------------------------------- buildMessage
   buildMessage: function(id) {
-    return({ id: id, username: this.props.username, auth: this.state.auth, token: this.props.token });
+    return({ id: id, username: this.props.username, auth: this.state.auth, token: this.state.token });
   },
   
   
@@ -182,17 +211,21 @@ var Box = React.createClass({
   sendAction: function(message) {
     var messageToSend = this.buildMessage(5);
     $.extend(messageToSend, message);
+    console.log("Sending...");
+    console.log(messageToSend );
     this.state.websocket.send(JSON.stringify( messageToSend ));    
   },
   
   sendActionWithTarget: function(target) {
     $.extend( target, this.state.targetMessage );
     $.extend( target, this.buildMessage(5) );
-    console.log(target);
     this.state.websocket.send(JSON.stringify( target )); 
     this.setState({ targetMessage: {}, needTarget: false });
   },
   
+  leaveLobby: function(e) {
+    this.state.websocket.send(JSON.stringify( this.buildMessage(4) ));
+  },
   // ----------------------------------------------------------------- getActionForTarget
   getActionForTarget(message) {
     this.setState({ targetMessage: message, needTarget: true })
@@ -210,7 +243,6 @@ var Box = React.createClass({
 
   // -------------------------------------------------------------------- render
   render: function render() {
-    console.log(this.state.needTarget);
     return React.createElement(
       'div',
       { className: 'container game-area' },
@@ -241,6 +273,11 @@ var Box = React.createClass({
         'a',
         { className:'btn btn-info', href: '#', onClick: this.startGameWithFake },
         'start game with fake'
+      ),
+      React.createElement(
+        'a',
+        { className:'btn btn-info', href: '#', onClick: this.leaveLobby },
+        'Leave lobby'
       ),
       React.createElement(
         'br',
@@ -478,7 +515,7 @@ var ActionArea = React.createClass({
   },
   
   sendClaim: function(characterID) {
-    this.props.sendAction({ act: this.claim, character: characterID });
+    this.props.sendAction({ act: this.CLAIM_CHARACTER , character: characterID });
     this.setState({ pickingClaim: false });
   },
   
@@ -628,5 +665,5 @@ function startTimer(duration) {
 }
 
 $(document).ready(function () {
-  ReactDOM.render(React.createElement(Box, { 'username': USERNAME }), document.getElementById('react-area'));
+  ReactDOM.render(React.createElement(Box, { 'username': USERNAME, 'token': TOKEN }), document.getElementById('react-area'));
 });

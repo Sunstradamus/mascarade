@@ -30,7 +30,7 @@ authenticate_user();
 
     <script type="text/javascript">
       var USERNAME = "<?PHP echo $_SESSION['user']['username']; ?>";
-      var TOKEN = "<?PHP echo $_SESSION['user']['token']; ?>";
+      var TOKEN = "<?PHP echo $_SESSION['user']['token']; ?>";    
     </script>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
     <script src="js/react-with-addons.min.js"></script>
