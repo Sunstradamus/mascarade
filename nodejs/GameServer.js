@@ -455,6 +455,33 @@ var GameServer = function() {
             con.terminate();
           }
           break;
+        case 8:
+          if (msg.username && msg.auth) {
+            // Check if user is even authenticated for our server
+            if (!self.userList.hasOwnProperty(msg.username)) {
+              con.terminate();
+              break;
+            }
+            if (self.userList[msg.username].auth === msg.auth && con === self.userList[msg.username].connection) {
+              if (msg.text) {
+                self.broadcast(JSON.stringify({ id: 10, user: msg.username, msg: msg.text }));
+              }
+            } else {
+              if (self.userList[msg.username].auth === msg.auth) {
+                // Bogus connection, not the original connection
+                // NOTE: I actually don't know what happens when the browser disconnects, does it attempt to reconnect on the same socket ID?
+                con.terminate();
+              } else {
+                // Invalid auth key, someone may have tried to guess/hijack it so regen key and send back to original client
+                var authKey = Math.floor(Math.random() * self.keyLen);
+                self.userList[msg.username].auth = authKey;
+                self.userList[msg.username].connection.send(JSON.stringify({ id: 100, auth: authKey }));
+              }
+            }
+          } else {
+            con.terminate();
+          }
+          break;
         // Using 999, 998 to check connection vars & exit conditions, remove once I figure out how websockets work when clients disconnect
         case 999:
           if (con === self.userList[msg.username].connection) {

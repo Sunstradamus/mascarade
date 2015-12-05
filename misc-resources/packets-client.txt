@@ -8,6 +8,7 @@ Recv:
 7
 8 - Authentication rejected
 9 - Could not authenticate with Game Coordinator
+10 - Chat message
 
 100 - Regenerated authentication key
 101 - Insufficient users to start game

@@ -1,8 +1,59 @@
 Recv:
 1 - Authentication response
-2
+	username
+	token
+
+	{"id": 1, "username": "testuser", "token": <Token>}
+
+2 - Not used
+
 3 - Start game
+	username
+	auth
+
+	{"id": 3, "username": "testuser", "auth": 1}
+
 4 - Leave lobby
+	username
+	auth
+
+	{"id": 4, "username": "testuser", "auth": 1}
+
 5 - Player's action
+	username
+	auth
+	act
+
+	If act == SWAP (0)
+		target
+		fake
+
+	If act == CLAIM (2)
+		character
+
+	{"id": 5, "username": "testuser", "auth": 1, "act": 1}
+
 6 - Contest character
+	username
+	auth
+	contest
+
+	{"id": 6, "username": "testuser", "auth": 1, "contest": 1}
+
 7 - Character action player input
+	username
+	auth
+	target
+
+	If character == FOOL
+		other
+		fake
+
+	{"id": 7, "username": "testuser", "auth": 1, "target": "fakeuser1", "other": "fakeuser2", "fake": 1}
+
+8 - Player's chat message
+	username
+	auth
+	text
+
+	{"id": 8, "username": "testuser", "auth": 1, "text": "Hello!"}
