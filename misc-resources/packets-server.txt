@@ -45,11 +45,23 @@ Recv:
 	auth
 	target
 
-	If character == FOOL
-		other
-		fake
+	If state == STARTED_PROCESS_STAGE_2
+		If character == FOOL
+			other
+			fake
 
-	{"id": 7, "username": "testuser", "auth": 1, "target": "fakeuser1", "other": "fakeuser2", "fake": 1}
+		{"id": 7, "username": "testuser", "auth": 1, "target": "fakeuser1", "other": "fakeuser2", "fake": 1}
+
+	Else state == STARTED_PROCESS_STAGE_3
+		If character == SPY
+			fake
+
+		{"id": 7, "username": "testuser", "auth": 1, "fake": 1}
+
+		If character == INQUISITOR
+			guess
+
+		{"id": 7, "username": "testuser", "auth": 1, "guess": 2}
 
 8 - Player's chat message
 	username

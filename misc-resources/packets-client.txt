@@ -1,32 +1,117 @@
 Recv:
 1 - Authentication requested
+	{"id": 1}
+
 2 - Authentication approved
-3
-4
+	auth
+
+	{"id": 2, "auth": 1}
+
+3 - Not Used
+
+4 - Not Used
+
 5 - Turn notification & actions permitted
-6
-7
+	actions -- This is the result of a logical OR of permitted GameActions, e.g. GameAction.SWAP|GameAction.VIEW|GameAction.CLAIM
+
+	{"id": 5, "actions": 3}
+
+6 - Not Used
+
+7 - Not Used
+
 8 - Authentication rejected
+	{"id": 8}
+
 9 - Could not authenticate with Game Coordinator
+	{"id": 9}
+
 10 - Chat message
+	user
+	msg
+
+	{"id": 10, "user": "testuser", "msg": "Hello!"}
+
+
 
 100 - Regenerated authentication key
+	auth
+
+	{"id": 2, "auth": 1}
+
 101 - Insufficient users to start game
+	{"id": 101}
+
 102 - Too many users to start game
+	{"id": 102}
+
 103 - Invalid action
+	{"id": 103}
+
 104 - Game over, one winner
+	winner
+
+	{"id": 104, "winner": 0}
+
 105 - Game over, tied/multiple winners
+	players
+
+	{"id": 105, "players": [0, 1]}
+
+
 
 200 - Player has swapped or not with target player
+	target
+
+	{"id": 200, "target": "fakeuser1"}
+
 201 - Player has looked at their own card
+	{"id": 203}
+
 202 - Player has claimed a character
+	claimed
+
+	{"id": 202, "claimed": 2}
+
 203 - Fool, select two players to swap cards or not
+	{"id": 203}
+
 204 - Witch, select player to swap fortunes
+	{"id": 204}
+
 205 - Spy, look at your card and another one; then swap or not
+	card
+
+	{"id": 205, "card": 2}
+
 206 - Inquisitor, inquire a user
+	{"id": 206}
+
 207 - Spy, other player's card
+	card
+
+	{"id": 207, "card": 2}
+
 208 - Inquisitor, you are being inquired
+	{"id": 208}
+
 209 - Fool, players being swapped
+	target
+	other
+
+	{"id": 209, "target": "fakeuser1", "other": "fakeuser2"}
+
 210 - Witch, player being swapped
+	target
+
+	{"id": 210, "target": "fakeuser1"}
+
 211 - Spy, player being swapped
+	target
+
+	{"id": 211, "target": "fakeuser1"}
+
 212 - Inquisitor, player being inqired
+	target
+
+	{"id": 212, "target": "fakeuser1"}
