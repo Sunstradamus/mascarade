@@ -169,6 +169,10 @@ var GameServer = function() {
               break;
             }
             if (self.userList[msg.username].auth === msg.auth && con === self.userList[msg.username].connection) {
+              if (self.turn != self.playerList.indexOf(msg.username) && self.enableTurnCheck) {
+                con.send(JSON.stringify({ id: 103 }));
+                break;
+              }
               switch(self.state) {
                 case GameServerState.STARTED_FORCE_SWAP:
                   if (msg.hasOwnProperty('act') && msg.act === GameAction.SWAP_CARD && msg.hasOwnProperty('target') && msg.hasOwnProperty('fake') && (self.userList.hasOwnProperty(msg.target) || (msg.target === 0 && msg.target < self.centerCards.length) || (msg.target === 1 && msg.target < self.centerCards.length))) {
@@ -238,8 +242,7 @@ var GameServer = function() {
                         self.processGameState();
                         break;
                       case GameAction.CLAIM_CHARACTER:
-                        // Commented out so you can't break the server.
-                        /* if (msg.hasOwnProperty('character') && (self.playerCards.indexOf(msg.character) > -1)) {
+                        if (msg.hasOwnProperty('character') && (self.playerCards.indexOf(msg.character) != -1)) {
                           clearTimeout(self.gameLoop);
                           self.state = GameServerState.STARTED_CLAIM_CHARACTER;
                           self.characterOwner = self.playerList.indexOf(msg.username);
@@ -249,7 +252,7 @@ var GameServer = function() {
                           self.processGameState();
                         } else {
                           con.send(JSON.stringify({ id: 103 }));
-                        } */
+                        }
                         break;
                       default:
                         con.send(JSON.stringify({ id: 103 }));
@@ -287,6 +290,11 @@ var GameServer = function() {
               break;
             }
             if (self.userList[msg.username].auth === msg.auth && con === self.userList[msg.username].connection) {
+              // You can't contest your own card
+              if (self.characterOwner == self.playerList.indexOf(msg.username)) {
+                con.send(JSON.stringify({ id: 103 }));
+                break;
+              }
               if (self.state === GameServerState.STARTED_CLAIM_CHARACTER && msg.hasOwnProperty('contest')) {
                 if (msg.contest) {
                   self.contester.push(msg.username);
@@ -327,6 +335,11 @@ var GameServer = function() {
             }
             if (self.userList[msg.username].auth === msg.auth && con === self.userList[msg.username].connection) {
               if (self.state === GameServerState.STARTED_PROCESS_STAGE_2 && msg.hasOwnProperty('target') && self.userList.hasOwnProperty(msg.target)) {
+                // Only the character owner can respond
+                if (self.characterOwner == self.playerList.indexOf(msg.username)) {
+                  con.send(JSON.stringify({ id: 103 }));
+                  break;
+                }
                 switch(self.claimedCharacter) {
                   case GameCard.FOOL:
                     if (msg.hasOwnProperty('other') && self.userList.hasOwnProperty(msg.other) && msg.hasOwnProperty('fake')) {
@@ -379,6 +392,11 @@ var GameServer = function() {
               } else if (self.state === GameServerState.STARTED_PROCESS_STAGE_3) {
                 switch(self.claimedCharacter) {
                   case GameCard.SPY:
+                    // Only the character owner can respond
+                    if (self.characterOwner == self.playerList.indexOf(msg.username)) {
+                      con.send(JSON.stringify({ id: 103 }));
+                      break;
+                    }
                     if (msg.hasOwnProperty('fake')) {
                       clearTimeout(self.gameLoop);
                       if (msg.fake) {
@@ -396,6 +414,11 @@ var GameServer = function() {
                     }
                     break;
                   case GameCard.INQUISITOR:
+                    // Only the inquired can respond
+                    if (self.inquired == self.playerList.indexOf(msg.username)) {
+                      con.send(JSON.stringify({ id: 103 }));
+                      break;
+                    }
                     if (msg.hasOwnProperty('guess')) {
                       if (self.userList[self.playerList[self.inquired]].card != msg.guess) {
                         self.playerCoins[self.inquired] -= 4;
@@ -443,9 +466,9 @@ var GameServer = function() {
           break;
         // Temp force game start
         case 997:
-          self.userList['fakeuser1'] = { connection: con, auth: '123' };
-          self.userList['fakeuser2'] = { connection: con, auth: '234' };
-          self.userList['fakeuser3'] = { connection: con, auth: '345' };
+          self.userList['fakeuser1'] = { connection: con, auth: 123 };
+          self.userList['fakeuser2'] = { connection: con, auth: 234 };
+          self.userList['fakeuser3'] = { connection: con, auth: 345 };
           self.startGame();
           break;
         // Junk message received, ignore it (Or terminate connection?)
@@ -469,34 +492,36 @@ var GameServer = function() {
   };
 
   self.checkGameEnd = function() {
-    // Check if someone hits 0 to end the game; may have ties
-    if (self.playerCoins.indexOf(0) > -1) {
-      var playerIndex = -1;
-      var maxCoins = 0;
-      var winCounter = 0;
-      var ties = [];
-      for (var i = self.playerCoins.length - 1; i >= 0; i--) {
-        if (self.playerCoins[i] > maxCoins) {
-          playerIndex = i;
-          maxCoins = self.playerCoins[i];
-        }
-      };
-      for (var i = self.playerCoins.length - 1; i >= 0; i--) {
-        if (self.playerCoins[i] === maxCoins) {
-          winCounter += 1;
-          ties.push(i);
-        }
-      };
-      if (winCounter === 1) {
+    var gameOver = false;
+    var winCounter = 0;
+    var maxCoins = 0;
+    var playerIndex = -1;
+    var ties = [];
+    // Loop over player coins, check if game ended due to hitting <0 coins or >13 coins
+    for (var i = self.playerCoins.length - 1; i >= 0; i--) {
+      if (self.playerCoins[i] > maxCoins) {
+        playerIndex = i;
+        maxCoins = self.playerCoins[i];
+      }
+      if (self.playerCoins[i] <= 0) {
+        gameOver = true;
+      } else if (self.playerCoins[i] >= 13) {
+        gameOver = true;
+        winCounter += 1;
+        ties.push(i);
+      }
+    };
+
+    // If the game did end, select the winner
+    // Cheat has its own win check
+    if (gameOver) {
+      if (ties.length === 0) {
         self.endGame(playerIndex);
+      } else if (ties.length === 1) {
+        self.endGame(ties[0]);
       } else {
         self.endGame(ties);
       }
-    }
-    // Hitting 13 means there aren't any possible ties except for the Peasant, who gets his own victory check in process_claim along with the cheat
-    var winner = self.playerCoins.indexOf(13);
-    if (winner > -1) {
-      self.endGame(winner);
     }
   }
 
@@ -507,18 +532,18 @@ var GameServer = function() {
         cards = self.shuffle(cards);
         for (var i = self.playerList.length - 1; i >= 0; i--) {
           self.userList[self.playerList[i]].card = cards[i];
-          self.playerCards[i] = cards[i];
         };
         self.centerCards = [cards[4], cards[5]];
+        self.playerCards = cards;
         return;
       case 5:
         var cards = [GameCard.JUDGE, GameCard.BISHOP, GameCard.KING, GameCard.QUEEN, GameCard.WITCH, GameCard.CHEAT];
         cards = self.shuffle(cards);
         for (var i = self.playerList.length - 1; i >= 0; i--) {
           self.userList[self.playerList[i]].card = cards[i];
-          self.playerCards[i] = cards[i];
         };
         self.centerCards = [cards[5]];
+        self.playerCards = cards;
         return;
       case 6:
         var cards = [GameCard.JUDGE, GameCard.BISHOP, GameCard.KING, GameCard.QUEEN, GameCard.WITCH, GameCard.CHEAT];
@@ -598,7 +623,7 @@ var GameServer = function() {
   };
 
   self.endGame = function(winners) {
-    if (typeof winner === 'number') {
+    if (typeof winners === 'number') {
       self.broadcast(JSON.stringify({ id: 104, winner: winners }));
     } else {
       self.broadcast(JSON.stringify({ id: 105, players: winners }));
@@ -612,10 +637,11 @@ var GameServer = function() {
     self.playerList;
     self.characterOwner = -1;
     self.claimedCharacter = -1;
-    self.contestCounter = 0;
+    self.contestCounter = 1; // Init val is 1 so the card claimer doesn't need to reply with a contest packet
     self.contester = [];
     self.courtCoins = 0;
     self.doneWaiting = false;
+    self.enableTurnCheck = false;
     self.inquired = -1;
     self.keyLen = 1001;
     self.lobbyHost = '';
@@ -653,11 +679,13 @@ var GameServer = function() {
       case GameServerState.STARTED_CLAIM_CHARACTER:
         if (self.doneWaiting) {
           self.doneWaiting = false;
-          if (self.contestCounter > 0) {
+          if (self.contester.length > 0) {
             self.state = GameServerState.STARTED_CONTEST_CLAIM;
           } else {
             self.state = GameServerState.STARTED_PROCESS_CLAIM;
           }
+          // Reset counter to initial value
+          self.contestCounter = 1;
           clearTimeout(self.gameLoop);
           setImmediate(self.processGameState);
           return;

@@ -1,0 +1,25 @@
+Authenticate with testuser (Edit the token)
+
+{"id":1, "username":"testuser", "token":"6c26cf86c062e7e2b82046ed2996af9df220ee9a8898b1d57018c6fa73326a565ccf5a3742e0b1c2bc0a73d18f39295c68b52bac096348a6f117957fa1ad29fc"}
+
+Start game with 3 fake dummy players
+
+{"id":997, "auth":96}
+
+Fake a swap with fakeuser1
+
+{"id":5, "username":"testuser", "auth":96, "act":0, "target":"fakeuser1", "fake":1}
+
+Claim the King
+
+{"id":5, "username":"testuser", "auth":96, "act":2, "character":2}
+
+Do not contest a card
+
+{"id":6, "username":"testuser", "auth":96, "contest":0}
+
+{"id":6, "username":"fakeuser1", "auth":123, "contest":0}
+
+{"id":6, "username":"fakeuser2", "auth":234, "contest":0}
+
+{"id":6, "username":"fakeuser3", "auth":345, "contest":0}
