@@ -29,6 +29,7 @@ authenticate_user();
       <div class="lobbies-box">
         <div class="lobbies">
         </div>
+        <a class='btn btn-primary' id="logout" href="logout.php">Logout</a>
         <a class='btn btn-primary' id="new-lobby" href="#">Create Game Lobby</a>
       </div>
     </div>
