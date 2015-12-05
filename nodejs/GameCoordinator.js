@@ -25,6 +25,7 @@ switch (mode) {
     http.createServer(function(req, res) {
       var url = parser(req.url, true);
       res.setHeader("Content-Type", "application/json; charset=UTF-8");
+      res.setHeader("Access-Control-Allow-Origin", "http://localhost:8000");
       switch(req.method) {
         case 'GET':
           switch(url.pathname) {
