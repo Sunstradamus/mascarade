@@ -21,6 +21,7 @@ function delete_user_token() {
 	curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "DELETE");
 	curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 	curl_exec($ch);
+	curl_close($ch);
 }
 
 function generate_user_token() {

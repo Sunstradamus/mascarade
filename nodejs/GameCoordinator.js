@@ -126,6 +126,7 @@ switch (mode) {
               } else {
                 res.statusCode = 400;
               }
+              res.end();
               break;
             default:
               res.statusCode = 400;
