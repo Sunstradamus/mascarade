@@ -1,6 +1,6 @@
 <?PHP
-define("BASE_URL", "http://localhost:8080");
-define("GC_URL", "http://localhost:8000");
+define("BASE_URL", "http://localhost:8000"); // VM Host access
+define("GC_URL", "http://localhost:8000"); // VM Guest internal access
 
 define("MYSQL_HOST", "localhost");
 define("MYSQL_USER", "webapp");
