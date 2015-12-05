@@ -3,7 +3,7 @@ $("#new-lobby").click( function(e) {
   e.preventDefault()
   
   $.ajax({
-    url: 'http://' + window.location.hostname + ':8081/new_lobby?callback=?',
+    url: 'http://' + window.location.hostname + ':8001/new_lobby?callback=?',
     data: {},
     jsonpCallback: 'jsonCallback',
     dataType: 'jsonp',
@@ -17,7 +17,7 @@ $("#new-lobby").click( function(e) {
 
 $("document").ready( function() {
     $.ajax({
-    url: 'http://' + window.location.hostname + ':8081/lobbies?callback=?',
+    url: 'http://' + window.location.hostname + ':8001/lobbies?callback=?',
     data: {},
     jsonpCallback: 'jsonCallback',
     dataType: 'jsonp',
