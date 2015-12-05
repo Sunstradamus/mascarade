@@ -49,6 +49,3 @@ end
 execute 'install_forever' do
     command 'npm install forever -g'
 end
-execute 'run_game_coordinator' do
-    command 'forever start /home/vagrant/project/nodejs/GameCoordinator.js combined'
-end

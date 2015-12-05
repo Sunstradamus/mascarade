@@ -52,6 +52,8 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     chef.add_recipe "mascarade"
   end
 
+  config.vm.provision :shell, :inline => "forever start -l /home/vagrant/project/nodejs/GC_FOREVER.log -o /home/vagrant/project/nodejs/GC_STDOUT.log -e /home/vagrant/project/nodejs/GC_STDERR.log /home/vagrant/project/nodejs/GameCoordinator.js combined", privileged: "false", run: "always"
+
   # Enable provisioning with Fabric. Before using, you must (on your machine,
   # outside the VM) have Fabric and the vagrant-fabric plugin installed:
   #     sudo apt-get install fabric
