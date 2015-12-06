@@ -373,17 +373,17 @@ var Box = React.createClass({
   },
   
   getTargetOne(target) {
-    this.setState({ function (prevState, currProps) {
+    this.setState( function (prevState, currProps) {
       prevState.multiTarget.push( target );
       return{ multiTarget: prevState.multiTarget };
-    }
+    });
   },
   
   getTargetTwo(target) {
-    this.setState({ function (prevState, currProps) {
+    this.setState( function (prevState, currProps) {
       prevState.multiTarget.push( target );
       return{ multiTarget: prevState.multiTarget };
-    }
+    });
     this.setState({ needMultiTarget: false, needTarget: false, gameStateSpecial: 996 });
   },
   
@@ -504,7 +504,7 @@ var GameArena = React.createClass({
         gameState: this.props.gameState,
         multiTarget: this.props.multiTarget,
         needTarget: this.props.needTarget,
-        preservedTarget: this.props.preservedTarget
+        preservedTarget: this.props.preservedTarget,
         sendActionWithTarget: this.props.sendActionWithTarget }),
       React.createElement(ActionArea, { 
         gameCards: this.props.gameCards,
@@ -648,7 +648,7 @@ var CardRow = React.createClass({
       cards.push(React.createElement(
         'div',
         { className: "col-sm-2 col-xs-3 player" + offset, onClick: (this.props.cards[i]['selected'] ? null : this.target.bind(this,this.props.cards[i]['index']) ) },
-        React.createElement('img', { className: "player-card" + (this.props.needTarget ? " need-target" : "") + (this.props.cards[i]['selected'] ? " target-selected" : "",
+        React.createElement('img', { className: "player-card" + (this.props.needTarget ? " need-target" : "") + (this.props.cards[i]['selected'] ? " target-selected" : ""),
                                      src: "images/cardAssets/" + cardFile + ".png",
                                      }),
         React.createElement(
@@ -722,7 +722,7 @@ var ActionArea = React.createClass({
       this.props.getActionForTarget({ act: this.SWAP_CARD, fake: false });
     }
     else if( this.props.GAME_STATE_SPECIAL == this.SPECIAL_FOOL_READY ) {
-      this.props.
+      this.props.sendAction({ fake: 0 });
     }
   },
   
@@ -730,6 +730,9 @@ var ActionArea = React.createClass({
     e.preventDefault();
     if(this.props.myTurn && this.props.GAME_STATE_SPECIAL != this.SPECIAL_FOOL_READY ){
       this.props.getActionForTarget({ act: this.SWAP_CARD, fake: true });
+    }
+    else if( this.props.GAME_STATE_SPECIAL == this.SPECIAL_FOOL_READY ) {
+      this.props.sendAction({ fake: 1 });
     }
   },
   
@@ -758,13 +761,13 @@ var ActionArea = React.createClass({
   
   contest: function(contest, e) {
     e.preventDefault();
-    this.props.sendContest( 'contest': contest );
+    this.props.sendContest( {'contest': contest} );
   },
   
   spyChoice: function(choice, e) {
     e.preventDefault();
     this.props.sendAction({ fake: choice });
-  }
+  },
   
   render: function render() {
     
