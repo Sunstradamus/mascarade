@@ -96,7 +96,7 @@ var Box = React.createClass({
           cards = msg['revealedCards'];
         } 
         else if( msg.hasOwnProperty('playerCards')) {
-          cards = msg['revealedCards'];
+          cards = msg['playerCards'];
         }
       
         this.setState({ 
@@ -432,7 +432,7 @@ var Box = React.createClass({
         multiTarget: this.state.multiTarget,
         actions: this.state.actions,
         gameCards: this.state.gameCards,
-        preservedTarget: this.state.preservedTarget,
+        preservedTarget: this.state.multiTarget,
         
         // functions
         sendAction: this.sendAction,
@@ -644,7 +644,7 @@ var CardRow = React.createClass({
     var cards = [];
     for (var i = 0; i < this.props.cards.length; i++) {
       var offset = (i == 0 && this.props.offset != 0 ) ? " col-sm-offset-" + this.props.offset.toString() : "";
-      var cardFile = (this.props.cards[i].card != null) ? GameCard[this.props.cards[i]['card']] : "cardBack";
+      var cardFile = (this.props.cards[i].card != null) ? this.GameCard[this.props.cards[i]['card']] : "cardBack";
       cards.push(React.createElement(
         'div',
         { className: "col-sm-2 col-xs-3 player" + offset, onClick: (this.props.cards[i]['selected'] ? null : this.target.bind(this,this.props.cards[i]['index']) ) },
