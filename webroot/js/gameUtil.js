@@ -25,13 +25,14 @@ var ClaimArea = React.createClass({
     var cards = [];
     for( var i = 0 ; i < this.GameCard.length ; i++ ) {
       
-      // TODO only push cards that should be in the game at the given moment
+      if( this.props.gameCards.indexOf(i) > -1 ) {
       
-      cards.push(
-        React.createElement('img', { className: 'player-card claim-card col-sm-2 col-xs-3',
-                                     src: "images/cardAssets/" + this.GameCard[i] + ".png",
-                                     onClick: this.sendCard.bind(this,this.GameCard[i]) })
-      );
+        cards.push(
+          React.createElement('img', { className: 'player-card claim-card col-sm-2 col-xs-3',
+                                       src: "images/cardAssets/" + this.GameCard[i] + ".png",
+                                       onClick: this.sendCard.bind(this,this.GameCard[i]) })
+        );
+      }
     }
 
     

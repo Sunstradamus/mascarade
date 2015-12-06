@@ -22,7 +22,9 @@ var Box = React.createClass({
       gameState: 0,
       myTurn: false,
       needTarget: false,
-      middle: []
+      middle: [],
+      actions: 0,
+      gameCards: []
     };
   },
 
@@ -40,6 +42,21 @@ var Box = React.createClass({
     websocket.addEventListener('error', this.onError);
     this.setState({ websocket: websocket });
   },
+  
+  CHARACTERS: [
+    'judge',
+    'bishop',
+    'king',
+    'fool',
+    'queen',
+    'theif',
+    'witch',
+    'spy',
+    'peasant',
+    'cheat',
+    'inquisitor',
+    'widow'
+  ],
 
   // ----------------------------------------------------------- socketCallbacks
   onOpen: function onOpen(e) {
@@ -60,14 +77,20 @@ var Box = React.createClass({
     var msg = JSON.parse(e.data);
     
     if(!msg.hasOwnProperty('id')) {
-      
+      if(msg.hasOwnProperty('card')) {
+        this.setState(function (prevState, currProps) {
+          prevState.entries.push({ 'private': true, 'message': "Your card is the " + this.CHARACTERS[msg['card']] });
+          return { entries: prevState.entries };
+        });
+      }
       this.setState({ 
         gameState: msg['state'],
+        gameCards: msg.hasOwnProperty('playerCards') ? msg['playerCards'] : this.state.gameCards,
         playerCards: msg.hasOwnProperty('playerCards') ? msg['playerCards'] : [],
         players: msg.hasOwnProperty('players') ? msg['players'] : this.state.players,
         playerCoins: msg.hasOwnProperty('playerCoins') ? msg['playerCoins'] : this.state.playerCoins,
         middle: msg.hasOwnProperty('middle') ? msg['middle'] : [],
-        turn: msg['turn'],
+        turn: msg.hasOwnProperty('turn') ? msg['turn'] : this.state.turn,
       });
     }
     else {
@@ -81,7 +104,7 @@ var Box = React.createClass({
           // Authentication approved
           this.setState(function (prevState, currProps) {
             prevState.entries.push({ 'private': true, 'message': "Connected to game lobby" });
-            return { entries: prevState.entries, myTurn: true };
+            return { entries: prevState.entries };
           });
           this.setState({ auth: msg['auth'] });
           break;
@@ -89,14 +112,14 @@ var Box = React.createClass({
           // Turn notification & actions permitted
           this.setState(function (prevState, currProps) {
             prevState.entries.push({ 'private': true, 'message': "It's your turn!" });
-            return { entries: prevState.entries, myTurn: true };
+            return { entries: prevState.entries, myTurn: true, actions: msg['actions'] };
           });
           break;
         case 8:
           // Authentication rejected
           this.setState(function (prevState, currProps) {
             prevState.entries.push({ 'private': true, 'message': "Could not determine authenticity of client. Retrying..." });
-            return { entries: prevState.entries, myTurn: true };
+            return { entries: prevState.entries };
           });
           var self = this; // meta
           $.ajax({
@@ -107,7 +130,7 @@ var Box = React.createClass({
               if( msg["token"] == "" ) {
                 self.setState(function (prevState, currProps) {
                   prevState.entries.push({ 'private': true, 'message': "Authentication failed. Cannot join lobby." });
-                  return { entries: prevState.entries, myTurn: true };
+                  return { entries: prevState.entries };
                 });
               }
               else {
@@ -168,7 +191,9 @@ var Box = React.createClass({
           });
           break;
         case 201:
-          // Player has looked at their own card
+          // Player has looked at their own cards
+          console.log(this.state.players);
+          console.log(this.state.turn);
           this.setState(function (prevState, currProps) {
             prevState.entries.push({ 'private': false, 'message': prevState.players[prevState.turn] + " checked their card" });
             return { entries: prevState.entries };
@@ -178,6 +203,60 @@ var Box = React.createClass({
           // Player has claimed a character
           this.setState(function (prevState, currProps) {
             prevState.entries.push({ 'private': false, 'message': prevState.players[prevState.turn] + " is claiming " + CHARACTERS[msg['claimed']] });
+            return { entries: prevState.entries };
+          });
+          break;
+        case 203:
+          // Do the fool action
+          // TODO
+          break;
+        case 204:
+          // Witch, select player to swap fortunes with
+          this.setState(function (prevState, currProps) {
+            prevState.entries.push({ 'private': true, 'message': 'Select a player to swap fortunes with' });
+            return { entries: prevState.entries, needTarget: true, targetMessage: {} };
+          });
+          break;
+        case 205:
+          // Spy, look at your card and another one; then swap or not
+          // TODO
+          break;
+        case 206:
+          // Inquisitor, select a user to inquire
+          this.setState(function (prevState, currProps) {
+            prevState.entries.push({ 'private': true, 'message': 'Select a player to interrogate' });
+            return { entries: prevState.entries, needTarget: true, targetMessage: {} };
+          });
+          break;
+        case 207:
+          // Spy, other player's card
+          // Just needs to be YES/NO for swap
+          break;
+        case 208:
+          // You're being inquiried
+          // Just need to select one card from this.state.gameCards
+          break;
+        case 209:
+          this.setState(function (prevState, currProps) {
+            prevState.entries.push({ 'private': false, 'message': prevState.players[msg['target']] + " and " + prevState.players[msg['other']] + " might have had their cards swapped!" });
+            return { entries: prevState.entries };
+          });
+          break;
+        case 210:
+          this.setState(function (prevState, currProps) {
+            prevState.entries.push({ 'private': false, 'message': prevState.players[msg['target']] + " had their fortune swapped!" });
+            return { entries: prevState.entries };
+          });
+          break;
+        case 211:
+          this.setState(function (prevState, currProps) {
+            prevState.entries.push({ 'private': false, 'message': prevState.players[msg['target']] + " might have had their card swapped with the spy!" });
+            return { entries: prevState.entries };
+          });
+          break;
+        case 212:
+          this.setState(function (prevState, currProps) {
+            prevState.entries.push({ 'private': false, 'message': prevState.players[msg['target']] + " is being interrogated!" });
             return { entries: prevState.entries };
           });
           break;
@@ -217,10 +296,29 @@ var Box = React.createClass({
   },
   
   sendActionWithTarget: function(target) {
+    var id = this.state.targetMessage.hasOwnProperty('act') ? 5 : 7 // no act means it's a character
     $.extend( target, this.state.targetMessage );
-    $.extend( target, this.buildMessage(5) );
+    $.extend( target, this.buildMessage(id) );
     this.state.websocket.send(JSON.stringify( target )); 
     this.setState({ targetMessage: {}, needTarget: false });
+  },
+  
+  sendContest: function(message) {
+    $.extend( message, this.buildMessage(6) );
+    this.state.websocket.send(JSON.stringify( message ));
+    console.log(message);
+    if( message['contest'] == 1) {
+      this.setState(function (prevState, currProps) {
+        prevState.entries.push({ 'private': true, 'message': "You will contest " + prevState.players[prevState.turn] + "'s claim!" });
+        return { entries: prevState.entries };
+      });
+    }
+    else {
+      this.setState(function (prevState, currProps) {
+        prevState.entries.push({ 'private': true, 'message': "You will not contest " + prevState.players[prevState.turn] + "'s claim!" });
+        return { entries: prevState.entries };
+      });
+    }
   },
   
   leaveLobby: function(e) {
@@ -243,6 +341,7 @@ var Box = React.createClass({
 
   // -------------------------------------------------------------------- render
   render: function render() {
+    console.log(this.state.myTurn);
     return React.createElement(
       'div',
       { className: 'container game-area' },
@@ -258,11 +357,14 @@ var Box = React.createClass({
         gameState: this.state.gameState,
         myTurn: this.state.myTurn,
         needTarget: this.state.needTarget,
+        actions: this.state.actions,
+        gameCards: this.state.gameCards,
         
         // functions
         sendAction: this.sendAction,
         getActionForTarget: this.getActionForTarget,
-        sendActionWithTarget: this.sendActionWithTarget
+        sendActionWithTarget: this.sendActionWithTarget,
+        sendContest: this.sendContest
       }),
       React.createElement(
         'a',
@@ -325,11 +427,16 @@ var GameArena = React.createClass({
         needTarget: this.props.needTarget,
         sendActionWithTarget: this.props.sendActionWithTarget }),
       React.createElement(ActionArea, { 
+        gameCards: this.props.gameCards,
+        myTurn: this.props.myTurn,
+        gameState: this.props.gameState,
+        actions: this.props.actions,
         myName: this.props.playerName,
         myCoins: myCoins,
         myCard: myCard,
         getActionForTarget: this.props.getActionForTarget,
-        sendAction: this.props.sendAction })
+        sendAction: this.props.sendAction,
+        sendContest: this.props.sendContest })
     );
   }
 });
@@ -488,6 +595,7 @@ var ActionArea = React.createClass({
     'inquisitor',
     'widow',
   ],
+  
 
   displayName: 'ActionArea',
   
@@ -496,22 +604,31 @@ var ActionArea = React.createClass({
   },
   
   check: function(e) {
-    e.preventDefault()
-    this.props.sendAction({ act: this.VIEW_OWN_CARD });
+    e.preventDefault();
+    if(this.props.myTurn) {
+      this.props.sendAction({ act: this.VIEW_OWN_CARD });
+    }
   },
   
   swap: function(e) {
-    e.preventDefault()
-    this.props.getActionForTarget({ act: this.SWAP_CARD, fake: false });
+    e.preventDefault();
+    if(this.props.myTurn) {
+      this.props.getActionForTarget({ act: this.SWAP_CARD, fake: false });
+    }
   },
   
   fake: function(e) {
-    e.preventDefault()
-    this.props.getActionForTarget({ act: this.SWAP_CARD, fake: true });
+    e.preventDefault();
+    if(this.props.myTurn){
+      this.props.getActionForTarget({ act: this.SWAP_CARD, fake: true });
+    }
   },
   
   claim: function(e) {
-    this.setState({ pickingClaim: true });
+    e.preventDefault();
+    if(this.props.myTurn){
+      this.setState({ pickingClaim: true });
+    }
   },
   
   sendClaim: function(characterID) {
@@ -523,31 +640,63 @@ var ActionArea = React.createClass({
     this.setState({ pickingClaim: false });
   },
   
+  contest: function(contest, e) {
+    e.preventDefault();
+    var message = {};
+    if (contest == 1) {
+      message['contest'] = 1;
+    }
+    this.props.sendContest( message );
+  },
+  
   render: function render() {
+    
+
     
     var cardFile = (this.props.card != null) ? GameCard[this.props.card] : "cardBack";
     var buttonsArea;
     
     if (this.state.pickingClaim) {
       buttonsArea = React.createElement( ClaimArea, { sendClaim: this.sendClaim,
-                                                      cancelClaim: this.cancelClaim });
+                                                      cancelClaim: this.cancelClaim,
+                                                      gameCards: this.props.gameCards  });
     }
     
-    else {
+
+    
+    else if (this.props.gameState == 3) {
       buttonsArea = React.createElement(
                       'div',
                       { className: 'col-sm-8 buttons-area' },
-                      React.createElement('img', { className: 'col-sm-6 action-button',
-                                                   src: 'images/zipboys/check.png',
+                      React.createElement('img', { className: "col-sm-6 action-button",
+                                                   src: "images/zipboys/contest.png",
+                                                   onClick: this.contest.bind(this, 1) }),
+                      React.createElement('img', { className: "col-sm-6 action-button",
+                                                   src: "images/zipboys/nocontest.png",
+                                                   onClick: this.contest.bind(this, 0) })
+                      );
+    }
+    
+    else {
+      
+      var canClaim = ( this.props.myTurn && ((this.CLAIM_CHARACTER & this.props.actions ) != 0));
+      var canCheck = ( this.props.myTurn && ((this.VIEW_OWN_CARD & this.props.actions ) != 0));
+      var canSwap = this.props.myTurn;
+      
+      buttonsArea = React.createElement(
+                      'div',
+                      { className: 'col-sm-8 buttons-area' },
+                      React.createElement('img', { className: "col-sm-6 action-button" + (canCheck ? " available" : ""),
+                                                   src: "images/zipboys/check" + (canCheck ? "" : "Press") + ".png",
                                                    onClick: this.check }),
-                      React.createElement('img', { className: 'col-sm-6 action-button', 
-                                                   src: 'images/zipboys/swap.png',
+                      React.createElement('img', { className: "col-sm-6 action-button" + (canSwap ? " available" : ""),
+                                                   src: "images/zipboys/swap" + (canSwap ? "" : "Press") + ".png",
                                                    onClick: this.swap }),
-                      React.createElement('img', { className: 'col-sm-6 action-button', 
-                                                   src: 'images/zipboys/claim.png',
+                      React.createElement('img', { className: "col-sm-6 action-button" + (canClaim ? " available" : ""), 
+                                                   src: "images/zipboys/claim" + (canClaim ? "" : "Press") + ".png",
                                                    onClick: this.claim }),
-                      React.createElement('img', { className: 'col-sm-6 action-button', 
-                                                   src: 'images/zipboys/fake.png',
+                      React.createElement('img', { className: "col-sm-6 action-button" + (canSwap ? " available" : ""),
+                                                   src: "images/zipboys/fake" + (canSwap ? "" : "Press") + ".png",
                                                    onClick: this.fake }),
                       React.createElement('span', { id: 'timer' })
       );
@@ -664,6 +813,9 @@ function startTimer(duration) {
     }, 1000);
 }
 
+
+
 $(document).ready(function () {
   ReactDOM.render(React.createElement(Box, { 'username': USERNAME, 'token': TOKEN }), document.getElementById('react-area'));
 });
+
