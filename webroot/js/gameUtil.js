@@ -35,17 +35,21 @@ var ClaimArea = React.createClass({
       }
     }
 
+    var cancel = "";
+    if( this.props.cancelClaim != null ) {
+      cancel = React.createElement(
+        'a',
+        { href:'#', onClick: this.props.cancelClaim, className: 'btn btn-cancel' },
+        'cancel'
+        )
+    }
     
     return (
       React.createElement(
         'div',
         { className: 'col-sm-8 buttons-area' },
         cards,
-        React.createElement(
-        'a',
-        { href:'#', onClick: this.props.cancelClaim, className: 'btn btn-cancel' },
-        'cancel'
-        )
+        
       )
     )
   }

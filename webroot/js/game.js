@@ -24,7 +24,12 @@ var Box = React.createClass({
       needTarget: false,
       middle: [],
       actions: 0,
-      gameCards: []
+      gameCards: [],
+      gameStateSpecial: 0,
+      myCard: -1,
+      revealedCards: {},
+      needMultiTarget: false,
+      multiTarget: [],
     };
   },
 
@@ -83,15 +88,27 @@ var Box = React.createClass({
           return { entries: prevState.entries };
         });
       }
-      this.setState({ 
-        gameState: msg['state'],
-        gameCards: msg.hasOwnProperty('playerCards') ? msg['playerCards'] : this.state.gameCards,
-        playerCards: msg.hasOwnProperty('playerCards') ? msg['playerCards'] : [],
-        players: msg.hasOwnProperty('players') ? msg['players'] : this.state.players,
-        playerCoins: msg.hasOwnProperty('playerCoins') ? msg['playerCoins'] : this.state.playerCoins,
-        middle: msg.hasOwnProperty('middle') ? msg['middle'] : [],
-        turn: msg.hasOwnProperty('turn') ? msg['turn'] : this.state.turn,
-      });
+      
+      else {
+      
+        var cards = [];
+        if( msg.hasOwnProperty('revealedCards')) {
+          cards = msg['revealedCards'];
+        } 
+        else if( msg.hasOwnProperty('playerCards')) {
+          cards = msg['revealedCards'];
+        }
+      
+        this.setState({ 
+          gameState: msg['state'],
+          gameCards: msg.hasOwnProperty('playerCards') ? msg['playerCards'] : this.state.gameCards,
+          playerCards: cards,
+          players: msg.hasOwnProperty('players') ? msg['players'] : this.state.players,
+          playerCoins: msg.hasOwnProperty('playerCoins') ? msg['playerCoins'] : this.state.playerCoins,
+          middle: msg.hasOwnProperty('middle') ? msg['middle'] : [],
+          turn: msg.hasOwnProperty('turn') ? msg['turn'] : this.state.turn,
+        });
+      }
     }
     else {
       
@@ -142,7 +159,7 @@ var Box = React.createClass({
           break;
         case 100:
           // Regenerated authentication key
-          auth = msg['auth'];
+          this.setState({ auth: msg['auth'] });
           break;
         case 101:
           // Insufficient users to start game
@@ -186,7 +203,7 @@ var Box = React.createClass({
         case 200:
           // Player has swapped or not with target player
           this.setState(function (prevState, currProps) {
-            prevState.entries.push({ 'private': false, 'message': prevState.players[prevState.turn] + " might've swapped with " + msg['target'] });
+            prevState.entries.push({ 'private': false, 'message': prevState.players[prevState.turn] + " might have swapped with " + msg['target'] });
             return { entries: prevState.entries };
           });
           break;
@@ -208,7 +225,10 @@ var Box = React.createClass({
           break;
         case 203:
           // Do the fool action
-          // TODO
+          this.setState(function (prevState, currProps) {
+            prevState.entries.push({ 'private': true, 'message': 'Fool! Pick two cards and swap them (or fake swap)'  });
+            return { entries: prevState.entries, needMultiTarget: true, needTarget: true, gameStateSpecial: 997 };
+          });
           break;
         case 204:
           // Witch, select player to swap fortunes with
@@ -219,7 +239,10 @@ var Box = React.createClass({
           break;
         case 205:
           // Spy, look at your card and another one; then swap or not
-          // TODO
+          this.setState(function (prevState, currProps) {
+            prevState.entries.push({ 'private': true, 'message': 'Select a player check the card of.' });
+            return { entries: prevState.entries, myCard: msg['card'], needTarget: true, targetMessage: {}, preservedTarget: { needed: true } };
+          });
           break;
         case 206:
           // Inquisitor, select a user to inquire
@@ -230,11 +253,18 @@ var Box = React.createClass({
           break;
         case 207:
           // Spy, other player's card
-          // Just needs to be YES/NO for swap
+          this.setState(function (prevState, currProps) {
+            prevState.entries.push({ 'private': true, 'message': 'Choose whether or not to swap' });
+            prevState.preservedTarget['card'] = msg['card'];
+            return { entries: prevState.entries, preservedTarget: prevState.preservedTarget, gameStateSpecial: 999 };
+          });
           break;
         case 208:
           // You're being inquiried
-          // Just need to select one card from this.state.gameCards
+          this.setState(function (prevState, currProps) {
+            prevState.entries.push({ 'private': true, 'message': 'You are being interoggated! Guess you card' });
+            return { entries: prevState.entries, gameStateSpecial: 998 };
+          });
           break;
         case 209:
           this.setState(function (prevState, currProps) {
@@ -288,21 +318,33 @@ var Box = React.createClass({
   },
   
   sendAction: function(message) {
-    var messageToSend = this.buildMessage(5);
+    var id = this.state.targetMessage.hasOwnProperty('act') ? 5 : 7 // no act means it's a character
+    var messageToSend = this.buildMessage(id);
+    
+    if(this.state.GAME_STATE_SPECIAL == 996) { // special stuff for fool
+      messageToSend['target'] = this.state.multiTarget[0];
+      messageToSend['other'] = this.state.multiTarget[1];
+      this.setState({ needMultiTarget: false, needTarget: false, multiTarget: [] });
+    }
+    
     $.extend(messageToSend, message);
     console.log("Sending...");
     console.log(messageToSend );
-    this.state.websocket.send(JSON.stringify( messageToSend ));    
+    this.state.websocket.send(JSON.stringify( messageToSend ));
+    this.setState({ preservedTarget: {}, gameStateSpecial: 0 });    
   },
   
   sendActionWithTarget: function(target) {
+    if(this.state.preservedTarget.hasOwnProperty('needed') && this.state.preservedTarget['needed']) {
+      this.setState({ preservedTarget: { target: target } });
+    }
     var id = this.state.targetMessage.hasOwnProperty('act') ? 5 : 7 // no act means it's a character
     $.extend( target, this.state.targetMessage );
     $.extend( target, this.buildMessage(id) );
     this.state.websocket.send(JSON.stringify( target )); 
     this.setState({ targetMessage: {}, needTarget: false });
   },
-  
+   
   sendContest: function(message) {
     $.extend( message, this.buildMessage(6) );
     this.state.websocket.send(JSON.stringify( message ));
@@ -321,12 +363,28 @@ var Box = React.createClass({
     }
   },
   
+  
   leaveLobby: function(e) {
     this.state.websocket.send(JSON.stringify( this.buildMessage(4) ));
   },
   // ----------------------------------------------------------------- getActionForTarget
   getActionForTarget(message) {
     this.setState({ targetMessage: message, needTarget: true })
+  },
+  
+  getTargetOne(target) {
+    this.setState({ function (prevState, currProps) {
+      prevState.multiTarget.push( target );
+      return{ multiTarget: prevState.multiTarget };
+    }
+  },
+  
+  getTargetTwo(target) {
+    this.setState({ function (prevState, currProps) {
+      prevState.multiTarget.push( target );
+      return{ multiTarget: prevState.multiTarget };
+    }
+    this.setState({ needMultiTarget: false, needTarget: false, gameStateSpecial: 996 });
   },
   
   // --------------------------------------------------------------- Debug tools
@@ -341,7 +399,21 @@ var Box = React.createClass({
 
   // -------------------------------------------------------------------- render
   render: function render() {
-    console.log(this.state.myTurn);
+
+    
+    var targetSelectorFunction = this.sendActionWithTarget;
+    if( this.state.needMultiTarget ) {
+      if( this.state.multiTarget.length == 0 ) {
+        targetSelectorFunction = this.getTargetOne;
+      }
+      else if (this.state.multiTarget.length == 1) {
+        targetSelectorFunction = this.getTargetTwo;
+      }
+      else {
+        targetSelectorFunction = null;
+      }
+    }
+    
     return React.createElement(
       'div',
       { className: 'container game-area' },
@@ -357,13 +429,15 @@ var Box = React.createClass({
         gameState: this.state.gameState,
         myTurn: this.state.myTurn,
         needTarget: this.state.needTarget,
+        multiTarget: this.state.multiTarget,
         actions: this.state.actions,
         gameCards: this.state.gameCards,
+        preservedTarget: this.state.preservedTarget,
         
         // functions
         sendAction: this.sendAction,
         getActionForTarget: this.getActionForTarget,
-        sendActionWithTarget: this.sendActionWithTarget,
+        sendActionWithTarget: targetSelectorFunction,
         sendContest: this.sendContest
       }),
       React.createElement(
@@ -415,6 +489,10 @@ var GameArena = React.createClass({
       }
     }
     
+    if( this.props.myCard > -1 ) {
+      myCard = this.props.myCard;
+    }
+    
     return React.createElement(
       'div',
       { className: 'col-sm-9 game-arena' },
@@ -424,7 +502,9 @@ var GameArena = React.createClass({
         playerCards: this.props.playerCards,
         middle: this.props.middle,
         gameState: this.props.gameState,
+        multiTarget: this.props.multiTarget,
         needTarget: this.props.needTarget,
+        preservedTarget: this.props.preservedTarget
         sendActionWithTarget: this.props.sendActionWithTarget }),
       React.createElement(ActionArea, { 
         gameCards: this.props.gameCards,
@@ -477,26 +557,43 @@ var CardArea = React.createClass({
       if (this.props.players[i] == this.props.playerName) {
         continue;
       } else if (j >= numOpponents / 2 || numOpponents <= 4) {
+        var thisCard;
+        if(this.props.preservedTarget.hasOwnProperty('target') && this.props.preservedTarget['target'] == this.props.players[i] && this.props.preservedTarget.hasOwnProperty('card')) {
+          thisCard = this.props.preservedTarget['card'];
+        }
+        else {
+          thisCard = this.props.playerCards[i];
+        }
         topCards.push({ name: this.props.players[i],
                         coins: this.props.playerCoins[i],
-                        card: this.props.playerCards[i],
-                        index: this.props.players[i] });
+                        card: thisCard,
+                        index: this.props.players[i],
+                        selected: (this.props.multiTarget.indexOf( this.props.players[i] ) > -1) });
         j++;
       } else {
         botCards.push({ name: this.props.players[i],
                         coins: this.props.playerCoins[i],
-                        card: this.props.playerCards[i],
-                        index: this.props.players[i] });
+                        card: thisCard,
+                        index: this.props.players[i],
+                        selected: (this.props.multiTarget.indexOf( this.props.players[i] ) > -1) });
         j++;
       }
     }
 
     if (this.props.players.length < 6 && this.props.gameState != 0) {
       for( var j = 0 ; j < (6 - this.props.players.length) ; j++ ) {
+        var thisCard;
+        if(this.props.preservedTarget.hasOwnProperty('target') && this.props.preservedTarget['target'] == j && this.props.preservedTarget.hasOwnProperty('card')) {
+          thisCard = this.props.preservedTarget['card'];
+        }
+        else {
+          thisCard = this.props.middle[j];
+        }
         botCards.push({ name: "middlecard" + j.toString(),
                         coins: 0,
-                        card: this.props.middle[j],
-                        index: j});
+                        card: thisCard,
+                        index: j,
+                        selected: (this.props.multiTarget.indexOf( j ) > -1) });
       
       }
       
@@ -547,11 +644,11 @@ var CardRow = React.createClass({
     var cards = [];
     for (var i = 0; i < this.props.cards.length; i++) {
       var offset = (i == 0 && this.props.offset != 0 ) ? " col-sm-offset-" + this.props.offset.toString() : "";
-      var cardFile = (this.props.card != null) ? GameCard[this.props.cards[i]['card']] : "cardBack";
+      var cardFile = (this.props.cards[i].card != null) ? GameCard[this.props.cards[i]['card']] : "cardBack";
       cards.push(React.createElement(
         'div',
-        { className: "col-sm-2 col-xs-3 player" + offset, onClick: this.target.bind(this,this.props.cards[i]['index']) },
-        React.createElement('img', { className: "player-card" + (this.props.needTarget ? " need-target" : ""),
+        { className: "col-sm-2 col-xs-3 player" + offset, onClick: (this.props.cards[i]['selected'] ? null : this.target.bind(this,this.props.cards[i]['index']) ) },
+        React.createElement('img', { className: "player-card" + (this.props.needTarget ? " need-target" : "") + (this.props.cards[i]['selected'] ? " target-selected" : "",
                                      src: "images/cardAssets/" + cardFile + ".png",
                                      }),
         React.createElement(
@@ -580,6 +677,15 @@ var ActionArea = React.createClass({
   SWAP_CARD: 0,
   VIEW_OWN_CARD: 1,
   CLAIM_CHARACTER: 2,
+  
+  CHOOSE_CONTEST: 3,
+  
+  SPECIAL_CHOOSE_SWAP: 999, // not a server side game state, start from 999 work down
+  SPECIAL_BEING_INQUIRED: 998,
+  SPECIAL_FOOL_NOT_READY: 997,
+  SPECIAL_FOOL_READY: 996,
+  
+  // TODO: stop having this defined in like 3 places
   
   GameCard: [ 
     'judge',
@@ -612,14 +718,17 @@ var ActionArea = React.createClass({
   
   swap: function(e) {
     e.preventDefault();
-    if(this.props.myTurn) {
+    if(this.props.myTurn && this.props.GAME_STATE_SPECIAL != this.SPECIAL_FOOL_READY ) {
       this.props.getActionForTarget({ act: this.SWAP_CARD, fake: false });
+    }
+    else if( this.props.GAME_STATE_SPECIAL == this.SPECIAL_FOOL_READY ) {
+      this.props.
     }
   },
   
   fake: function(e) {
     e.preventDefault();
-    if(this.props.myTurn){
+    if(this.props.myTurn && this.props.GAME_STATE_SPECIAL != this.SPECIAL_FOOL_READY ){
       this.props.getActionForTarget({ act: this.SWAP_CARD, fake: true });
     }
   },
@@ -632,8 +741,15 @@ var ActionArea = React.createClass({
   },
   
   sendClaim: function(characterID) {
-    this.props.sendAction({ act: this.CLAIM_CHARACTER , character: characterID });
-    this.setState({ pickingClaim: false });
+    if( this.props.gameStateSpecial == this.SPECIAL_BEING_INQUIRED ) {
+    
+      this.props.sendAction({ guess: characterID });
+    }
+    else {
+      
+      this.props.sendAction({ act: this.CLAIM_CHARACTER , character: characterID });
+      this.setState({ pickingClaim: false });
+    }
   },
   
   cancelClaim: function() {
@@ -642,29 +758,67 @@ var ActionArea = React.createClass({
   
   contest: function(contest, e) {
     e.preventDefault();
-    var message = {};
-    if (contest == 1) {
-      message['contest'] = 1;
-    }
-    this.props.sendContest( message );
+    this.props.sendContest( 'contest': contest );
   },
+  
+  spyChoice: function(choice, e) {
+    e.preventDefault();
+    this.props.sendAction({ fake: choice });
+  }
   
   render: function render() {
     
 
     
-    var cardFile = (this.props.card != null) ? GameCard[this.props.card] : "cardBack";
+    var cardFile = (this.props.myCard != null) ? this.GameCard[this.props.myCard] : "cardBack";
     var buttonsArea;
     
-    if (this.state.pickingClaim) {
+    if (this.state.pickingClaim || this.props.gameStateSpecial == this.SPECIAL_BEING_INQUIRED ) {
       buttonsArea = React.createElement( ClaimArea, { sendClaim: this.sendClaim,
-                                                      cancelClaim: this.cancelClaim,
+                                                      cancelClaim: (this.props.gameStateSpecial == this.SPECIAL_BEING_INQUIRED) ? null : this.cancelClaim,
                                                       gameCards: this.props.gameCards  });
     }
     
+    else if (this.props.gameStateSpecial == this.SPECIAL_CHOOSE_SWAP) {
+      buttonsArea = React.createElement(
+                      'div',
+                      { className: 'col-sm-8 buttons-area' },
+                      React.createElement('img', { className: "col-sm-6 action-button",
+                                                   src: "images/zipboys/swap.png",
+                                                   onClick: this.contest.bind(this, 0) }),
+                      React.createElement('img', { className: "col-sm-6 action-button",
+                                                   src: "images/zipboys/fake.png",
+                                                   onClick: this.contest.bind(this, 1) })
+                      );
+    }   
 
+    else if (this.props.gameStateSpecial == this.SPECIAL_FOOL_NOT_READY) {
+      buttonsArea = React.createElement(
+                      'div',
+                      { className: 'col-sm-8 buttons-area' },
+                      React.createElement('img', { className: "col-sm-6 action-button",
+                                                   src: "images/zipboys/swapPressed.png",
+                                                   onClick: null }),
+                      React.createElement('img', { className: "col-sm-6 action-button",
+                                                   src: "images/zipboys/fakePressed.png",
+                                                   onClick: null })
+                      );
+    }      
     
-    else if (this.props.gameState == 3) {
+    else if (this.props.gameStateSpecial == this.SPECIAL_FOOL_READY) {
+      buttonsArea = React.createElement(
+                      'div',
+                      { className: 'col-sm-8 buttons-area' },
+                      React.createElement('img', { className: "col-sm-6 action-button",
+                                                   src: "images/zipboys/swap.png",
+                                                   onClick: this.swap }),
+                      React.createElement('img', { className: "col-sm-6 action-button",
+                                                   src: "images/zipboys/fake.png",
+                                                   onClick: this.fake })
+                      );
+    }  
+    
+    else if (this.props.gameState == this.CHOOSE_CONTEST ) {
       buttonsArea = React.createElement(
                       'div',
                       { className: 'col-sm-8 buttons-area' },
