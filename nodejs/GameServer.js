@@ -58,7 +58,7 @@ var GameServer = function() {
       var msg;
       try {
         // Prevent DoS by halting the event loop through a large JSON parse
-        if (message.length > 500) {
+        if (message.length > self.maxBuffer) {
           throw "Bad data";
         }
         msg = JSON.parse(message);
@@ -463,7 +463,7 @@ var GameServer = function() {
               break;
             }
             if (self.userList[msg.username].auth === msg.auth && con === self.userList[msg.username].connection) {
-              if (msg.text) {
+              if (msg.hasOwnProperty("text") && msg.text.length < self.maxChatLen) {
                 self.broadcast(JSON.stringify({ id: 10, user: msg.username, msg: msg.text }));
               }
             } else {
@@ -678,6 +678,8 @@ var GameServer = function() {
     self.inquired = -1; // ID of player that is being inquired
     self.keyLen = 1001; // Range X of authKeys where x = (max - min) + min
     self.lobbyHost = ''; // Username of the lobby host (only used to start game)
+    self.maxBuffer = 300;
+    self.maxChatLen = 256;
     self.playerCards = []; // This exists only as a reference to check what cards are in the game, it is NOT updated for swaps, etc.
     self.playerCoins = []; // Updated array where index = player ID of all players' coin count
     self.secondPeasant = -1;
