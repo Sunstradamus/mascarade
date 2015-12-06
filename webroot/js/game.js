@@ -304,7 +304,7 @@ var Box = React.createClass({
   
   // --------------------------------------------------------------- buildMessage
   buildMessage: function(id) {
-    return({ id: id, username: this.props.username, auth: this.state.auth, token: this.state.token });
+    return({ id: id, username: this.props.username, auth: this.state.auth });
   },
   
   
