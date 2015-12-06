@@ -12,4 +12,4 @@ What is in progress:
   - Last pieces of game server (claiming actions)
 
 Premade accounts:
-testuser:password
+  - testuser:password

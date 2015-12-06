@@ -49,6 +49,13 @@ var GameServer = function() {
   self.activityCheck = function() {
     if (self.state === GameServerState.WAITING_FOR_USERS) {
       self.updateGC('exit');
+    } else {
+      var now = Date.now();
+      if (now - self.lastUserActivity > 150000) {
+        self.updateGC('exit');
+      } else {
+        setTimeout(self.activityCheck, 300000);
+      }
     }
   };
 
@@ -71,6 +78,7 @@ var GameServer = function() {
         case 1:
           // Check if packet has valid properties for the declared ID
           if (msg.username && msg.token) {
+            self.lastUserActivity = Date.now();
             // TODO: Figure out how to grab GC hostname
             getReq("http://localhost:8000/user_token?username="+msg.username+"&id="+lobbyId+"&key="+lobbyKey, function(res) {
               if (res.statusCode === 200) {
@@ -81,6 +89,11 @@ var GameServer = function() {
                 res.on('end', function() {
                   var get = JSON.parse(body);
                   if (msg.token === get.token) {
+                    if (self.state !== GameServerState.WAITING_FOR_USERS) {
+                      con.send(JSON.stringify({ id: 11 }));
+                      con.terminate();
+                      return;
+                    }
                     var authKey = Math.floor(Math.random() * self.keyLen);
                     if (self.lobbyHost === '') {
                       self.lobbyHost = msg.username;
@@ -110,6 +123,7 @@ var GameServer = function() {
               break;
             }
             if (self.userList[msg.username].auth === msg.auth && con === self.userList[msg.username].connection) {
+              self.lastUserActivity = Date.now();
               self.startGame();
             } else {
               if (self.userList[msg.username].auth === msg.auth) {
@@ -135,8 +149,14 @@ var GameServer = function() {
               break;
             }
             if (self.userList[msg.username].auth === msg.auth && con === self.userList[msg.username].connection) {
-              delete self.userList[msg.username];
-              con.terminate();
+              self.lastUserActivity = Date.now();
+              if (self.state === GameServerState.WAITING_FOR_USERS) {
+                delete self.userList[msg.username];
+                con.terminate();
+              } else {
+                self.userList[msg.username].connection.send = function() {};
+                con.terminate();
+              }
               if (self.lobbyHost === msg.username) {
                 var usernames = Object.keys(self.userList);
                 var userCount = usernames.length;
@@ -170,6 +190,7 @@ var GameServer = function() {
               break;
             }
             if (self.userList[msg.username].auth === msg.auth && con === self.userList[msg.username].connection) {
+              self.lastUserActivity = Date.now();
               if (self.turn != self.playerList.indexOf(msg.username) && self.enableTurnCheck) {
                 con.send(JSON.stringify({ id: 103 }));
                 break;
@@ -178,6 +199,10 @@ var GameServer = function() {
                 case GameServerState.STARTED_FORCE_SWAP:
                   if (msg.hasOwnProperty('act') && msg.act === GameAction.SWAP_CARD && msg.hasOwnProperty('target') && msg.hasOwnProperty('fake') && (self.userList.hasOwnProperty(msg.target) || (msg.target === 0 && msg.target < self.centerCards.length) || (msg.target === 1 && msg.target < self.centerCards.length))) {
                     clearTimeout(self.gameLoop);
+                    // You can't swap with yourself...
+                    if (msg.target == msg.username) {
+                      con.send(JSON.stringify({ id: 103 }));
+                    }
                     if (msg.fake) {
                       // Fake swap
                     } else {
@@ -212,6 +237,10 @@ var GameServer = function() {
                       case GameAction.SWAP_CARD:
                         if (msg.hasOwnProperty('target') && msg.hasOwnProperty('fake') && (self.userList.hasOwnProperty(msg.target) || (msg.target === 0 && msg.target < self.centerCards.length) || (msg.target === 1 && msg.target < self.centerCards.length))) {
                           clearTimeout(self.gameLoop);
+                          // You can't swap with yourself...
+                          if (msg.target == msg.username) {
+                            con.send(JSON.stringify({ id: 103 }));
+                          }
                           if (msg.fake) {
                             // Fake swap
                           } else {
@@ -291,6 +320,7 @@ var GameServer = function() {
               break;
             }
             if (self.userList[msg.username].auth === msg.auth && con === self.userList[msg.username].connection) {
+              self.lastUserActivity = Date.now();
               // You can't contest your own card
               if (self.characterOwner == self.playerList.indexOf(msg.username)) {
                 con.send(JSON.stringify({ id: 103 }));
@@ -298,7 +328,9 @@ var GameServer = function() {
               }
               if (self.state === GameServerState.STARTED_CLAIM_CHARACTER && msg.hasOwnProperty('contest')) {
                 if (msg.contest) {
-                  self.contester.push(msg.username);
+                  if (self.contester.indexOf(msg.username) != -1) {
+                    self.contester.push(msg.username);
+                  }
                 }
                 self.contestCounter += 1;
                 if (self.contestCounter === self.playerList.length) {
@@ -336,6 +368,7 @@ var GameServer = function() {
             }
             if (self.userList[msg.username].auth === msg.auth && con === self.userList[msg.username].connection) {
               if (self.state === GameServerState.STARTED_PROCESS_STAGE_2 && msg.hasOwnProperty('target') && self.userList.hasOwnProperty(msg.target)) {
+                self.lastUserActivity = Date.now();
                 // Only the character owner can respond
                 if (self.characterOwner == self.playerList.indexOf(msg.username)) {
                   con.send(JSON.stringify({ id: 103 }));
@@ -464,6 +497,7 @@ var GameServer = function() {
             }
             if (self.userList[msg.username].auth === msg.auth && con === self.userList[msg.username].connection) {
               if (msg.hasOwnProperty("text") && msg.text.length < self.maxChatLen) {
+                self.lastUserActivity = Date.now();
                 self.broadcast(JSON.stringify({ id: 10, user: msg.username, msg: msg.text }));
               }
             } else {
@@ -504,6 +538,19 @@ var GameServer = function() {
         default:
           break;
       }
+    });
+
+    con.on('close', function closeHandler(code, message) {
+      var users = Object.keys(self.userList);
+      for (var i = users.length - 1; i >= 0; i--) {
+        if (self.userList[users[i]].connection === con) {
+          if (self.state === GameServerState.WAITING_FOR_USERS) {
+            delete self.userList[users[i]];
+          } else {
+            self.userList[users[i]].connection.send = function() {};
+          }
+        }
+      };
     });
 
     // Authentication request to client
@@ -655,12 +702,18 @@ var GameServer = function() {
   };
 
   self.endGame = function(winners) {
+    var list = [];
     if (typeof winners === 'number') {
       self.broadcast(JSON.stringify({ id: 104, winner: winners }));
+      list.push(self.playerList[winners]);
+      self.updateGC('winner', list);
     } else {
       self.broadcast(JSON.stringify({ id: 105, players: winners }));
+      for (var i = winners.length - 1; i >= 0; i--) {
+        list.push(self.playerList[winners[i]]);
+      };
+      self.updateGC('winner', list);
     }
-    self.updateGC('exit');
   }
 
   self.initialize = function() {
@@ -677,6 +730,7 @@ var GameServer = function() {
     self.forceSwapCount = 0;
     self.inquired = -1; // ID of player that is being inquired
     self.keyLen = 1001; // Range X of authKeys where x = (max - min) + min
+    self.lastUserActivity = 0; // Timestamp in milliseconds of the last user generated event for dead server detection
     self.lobbyHost = ''; // Username of the lobby host (only used to start game)
     self.maxBuffer = 300;
     self.maxChatLen = 256;
@@ -688,12 +742,14 @@ var GameServer = function() {
     self.turn = -1; // Turn initialized to -1 so that advanceTurn will increment it to 0 and loop from 0 -> playerList.length-1
     self.userList = {};
 
-    /*process.on('uncaughtException', function(err) {
-      console.log("Caught Exception: "+err);
+    process.on('uncaughtException', function(err) {
+      //console.log("Caught Exception: "+err);
+      //console.log("Stack trace: "+err.stack);
 
       // Send GC a notification that the server crashed (is about to exit)
-      process.exit();
-    });*/
+      self.updateGC('error', err.stack);
+      //process.exit();
+    });
     setTimeout(self.activityCheck, 300000);
   };
 
@@ -909,6 +965,10 @@ var GameServer = function() {
   };
 
   self.startGame = function() {
+    if (self.state !== GameServerState.WAITING_FOR_USERS) {
+      self.userList[self.lobbyHost].connection.send(JSON.stringify({ id: 103 }));
+      return;
+    }
     var players = Object.keys(self.userList);
     if (players.length < 4) {
       self.userList[self.lobbyHost].connection.send(JSON.stringify({ id: 101 }));
@@ -931,15 +991,47 @@ var GameServer = function() {
     }
   };
 
-  self.updateGC = function(status) {
+  self.updateGC = function(status, payload) {
     switch(status) {
       case 'exit':
-        var req = request({ hostname: 'localhost', port: '8000', path: '/lobby?id='+lobbyId, method: 'DELETE' }, function(res) {
-          console.log(res.statusCode);
+        var req = request({ hostname: 'localhost', port: '8000', path: '/lobby?id='+lobbyId+"&key="+lobbyKey, method: 'DELETE' }, function(res) {
           process.exit();
         }).on('error', function(err) {
           console.log(err);
+          process.exit();
         }).end();
+        return;
+      case 'error':
+        var postData = 'msg='+payload;
+        var opts = {
+          hostname: 'localhost',
+          port: '8000',
+          path: '/error?id='+lobbyId+"&key="+lobbyKey,
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Content-Length': Buffer.byteLength(postData)
+          }
+        };
+        var req = request(opts, function(res) {
+          process.exit();
+        }).on('error', function(err) {
+          console.log(err);
+          process.exit();
+        });
+        req.write(postData);
+        req.end();
+        return;
+      case 'winner':
+        var postData = JSON.stringify(payload);
+        var req = request({ hostname: 'localhost', port: '8000', path: '/winner?id='+lobbyId+"&key="+lobbyKey, method: 'POST', headers: {'Content-Type':'application/json'} }, function(res) {
+          process.exit();
+        }).on('error', function(err) {
+          console.log(err);
+          process.exit();
+        });
+        req.write(postData);
+        req.end();
         return;
       default:
         return;

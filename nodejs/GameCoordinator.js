@@ -50,6 +50,7 @@ switch (mode) {
               for (var i = 0; i < 5; i++) {
                 id += allowed.charAt(Math.floor(Math.random() * 36));
               }
+              //spawn('node', ['/home/vagrant/project/nodejs/GameServer.js', id, basePort, LOBBY_KEY], { detached: true, stdio: ['ignore', process.stdout, process.stderr] });
               spawn('node', ['/home/vagrant/project/nodejs/GameServer.js', id, basePort, LOBBY_KEY], { detached: true });
               lobbies[id] = { state: 0, port: basePort };
               res.write(JSON.stringify({ id: id, state: 0, port: basePort }));
@@ -93,6 +94,61 @@ switch (mode) {
                 res.statusCode = 400;
               }
               res.end();
+              break;
+            case '/error':
+              if (url.query.id && url.query.key) {
+                if (lobbies.hasOwnProperty(url.query.id) && url.query.key === LOBBY_KEY) {
+                  var body = '';
+                  req.on('data', function (data) {
+                    body += data;
+                    if (body.length > 1e6) {
+                      req.connection.destroy();
+                    }
+                  });
+                  req.on('end', function() {
+                    var post = parsePost(body);
+                    console.log("Lobby ID "+url.query.id+" has crashed");
+                    console.log("["+url.query.id+"]: "+post.msg);
+                    delete lobbies[url.query.id];
+                    res.end();
+                  });
+                } else {
+                  res.statusCode = 400;
+                  res.end();
+                }
+              } else {
+                res.statusCode = 400;
+                res.end();
+              }
+              break;
+            case '/winner':
+              if (url.query.id && url.query.key) {
+                if (lobbies.hasOwnProperty(url.query.id) && url.query.key === LOBBY_KEY) {
+                  var body = '';
+                  req.on('data', function (data) {
+                    body += data;
+                    if (body.length > 1e6) {
+                      req.connection.destroy();
+                    }
+                  });
+                  req.on('end', function() {
+                    var post = JSON.parse(body);
+                    var winners = "";
+                    for (var i = post.length - 1; i >= 0; i--) {
+                      winners += post[i] + ", "
+                    };
+                    console.log("Lobby ID "+url.query.id+" has ended with winners: "+winners);
+                    delete lobbies[url.query.id];
+                    res.end();
+                  });
+                } else {
+                  res.statusCode = 400;
+                  res.end();
+                }
+              } else {
+                res.statusCode = 400;
+                res.end();
+              }
               break;
             default:
               res.statusCode = 400;

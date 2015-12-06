@@ -32,6 +32,8 @@ Recv:
 
 	{"id": 10, "user": "testuser", "msg": "Hello!"}
 
+11 - Lobby has already started, cannot join
+	{"id": 11}
 
 
 100 - Regenerated authentication key
