@@ -30,6 +30,7 @@ var Box = React.createClass({
       revealedCards: {},
       needMultiTarget: false,
       multiTarget: [],
+      preservedTarget: {}
     };
   },
 
