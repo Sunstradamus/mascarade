@@ -125,7 +125,7 @@
 .target-selected {
   border: 2px solid #e7f;
   border-radius: 1px;
-  cursor: pointer;
+  cursor: initial;
 }
 
 .claim-card {
