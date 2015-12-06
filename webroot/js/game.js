@@ -319,7 +319,7 @@ var Box = React.createClass({
   },
   
   sendAction: function(message) {
-    var id = this.state.targetMessage.hasOwnProperty('act') ? 5 : 7 // no act means it's a character
+    var id = message.hasOwnProperty('act') ? 5 : 7 // no act means it's a character
     var messageToSend = this.buildMessage(id);
     
     if(this.state.GAME_STATE_SPECIAL == 996) { // special stuff for fool
