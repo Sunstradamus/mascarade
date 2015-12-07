@@ -418,7 +418,7 @@ var GameServer = function() {
                   case GameCard.INQUISITOR:
                     clearTimeout(self.gameLoop);
                     self.broadcast(JSON.stringify({ id: 212, target: msg.target }));
-                    self.userList[target].connection.send({ id: 208 });
+                    self.userList[target].connection.send(JSON.stringify({ id: 208 }));
                     self.inquired = self.playerList.indexOf(msg.target);
                     self.state = GameServerState.STARTED_PROCESS_STAGE_3;
                     self.gameLoop = setTimeout(self.processGameState, 30000);
@@ -538,6 +538,15 @@ var GameServer = function() {
           self.userList['fakeuser1'] = { connection: con, auth: 123 };
           self.userList['fakeuser2'] = { connection: con, auth: 234 };
           self.userList['fakeuser3'] = { connection: con, auth: 345 };
+          self.userList['fakeuser4'] = { connection: con, auth: 345 };
+          self.userList['fakeuser5'] = { connection: con, auth: 345 };
+          self.userList['fakeuser6'] = { connection: con, auth: 345 };
+          self.userList['fakeuser7'] = { connection: con, auth: 345 };
+          self.userList['fakeuser8'] = { connection: con, auth: 345 };
+          self.userList['fakeuser9'] = { connection: con, auth: 345 };
+          self.userList['fakeuser10'] = { connection: con, auth: 345 };
+          self.userList['fakeuser11'] = { connection: con, auth: 345 };
+          self.userList['fakeuser12'] = { connection: con, auth: 345 };
           self.startGame();
           break;
         // Junk message received, ignore it (Or terminate connection?)
@@ -893,7 +902,7 @@ var GameServer = function() {
             break;
           case GameCard.FOOL:
             self.playerCoins[self.characterOwner] += 1;
-            self.userList[self.playerList[self.characterOwner]].connection.send({ id: 203 });
+            self.userList[self.playerList[self.characterOwner]].connection.send(JSON.stringify({ id: 203 }));
             self.state = GameServerState.STARTED_PROCESS_STAGE_2;
             break;
           case GameCard.QUEEN:
@@ -915,11 +924,11 @@ var GameServer = function() {
             setImmediate(self.processGameState);
             break;
           case GameCard.WITCH:
-            self.userList[self.playerList[self.characterOwner]].connection.send({ id: 204 });
+            self.userList[self.playerList[self.characterOwner]].connection.send(JSON.stringify({ id: 204 }));
             self.state = GameServerState.STARTED_PROCESS_STAGE_2;
             break;
           case GameCard.SPY:
-            self.userList[self.playerList[self.characterOwner]].connection.send({ id: 205, card: self.userList[self.playerList[self.characterOwner]].card });
+            self.userList[self.playerList[self.characterOwner]].connection.send(JSON.stringify({ id: 205, card: self.userList[self.playerList[self.characterOwner]].card }));
             self.state = GameServerState.STARTED_PROCESS_STAGE_2;
             break;
           case GameCard.PEASANT:
@@ -946,7 +955,7 @@ var GameServer = function() {
             setImmediate(self.processGameState);
             break;
           case GameCard.INQUISITOR:
-            self.userList[self.playerList[self.characterOwner]].connection.send({ id: 206 });
+            self.userList[self.playerList[self.characterOwner]].connection.send(JSON.stringify({ id: 206 }));
             self.state = GameServerState.STARTED_PROCESS_STAGE_2;
             break;
           case GameCard.WIDOW:
