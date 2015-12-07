@@ -327,12 +327,13 @@ var GameServer = function() {
                 break;
               }
               if (self.state === GameServerState.STARTED_CLAIM_CHARACTER && msg.hasOwnProperty('contest')) {
-                if (msg.contest) {
-                  if (self.contester.indexOf(msg.username) != -1) {
+                if (self.contestResponder.indexOf(msg.username) === -1) {
+                  if (msg.contest) {
                     self.contester.push(msg.username);
                   }
+                  self.contestResponder.push(msg.username);
+                  self.contestCounter += 1;
                 }
-                self.contestCounter += 1;
                 if (self.contestCounter === self.playerList.length) {
                   clearTimeout(self.gameLoop);
                   self.STARTED_CONTEST_CLAIM;
@@ -724,6 +725,7 @@ var GameServer = function() {
     self.claimedCharacter = -1;
     self.contestCounter = 1; // Init val is 1 so the card claimer doesn't need to reply with a contest packet
     self.contester = []; // Array of players that contest the claim
+    self.contestResponder = []; // Array of players that don't contest the claim
     self.courtCoins = 0;
     self.doneWaiting = false;
     self.enableTurnCheck = false;
@@ -778,6 +780,7 @@ var GameServer = function() {
           }
           // Reset counter to initial value
           self.contestCounter = 1;
+          self.contestResponder = [];
           clearTimeout(self.gameLoop);
           setImmediate(self.processGameState);
           return;
@@ -812,7 +815,7 @@ var GameServer = function() {
           var foundFirstPeasant = false;
           while (self.contester.length > 0) {
             var player = self.contester.pop();
-            var playerIndex = self.playerList.indexOf(user);
+            var playerIndex = self.playerList.indexOf(player);
             cards[playerIndex] = self.userList[player].card;
             if (self.userList[player].card === self.claimedCharacter) {
               if (foundFirstPeasant) {
@@ -847,8 +850,10 @@ var GameServer = function() {
             var maxCoins = 0;
             for (var i = self.playerCoins.length - 1; i >= 0; i--) {
               if (self.playerCoins[i] > maxCoins) {
-                richestPlayer = i;
-                maxCoins = self.playerCoins[i];
+                if (i != self.characterOwner) {
+                  richestPlayer = i;
+                  maxCoins = self.playerCoins[i];
+                }
               }
             };
             self.playerCoins[self.characterOwner] += 2;
@@ -875,7 +880,7 @@ var GameServer = function() {
             setImmediate(self.processGameState);
             break;
           case GameCard.THIEF:
-            var left = (self.characterOwner - 1) % self.playerList.length;
+            var left = (self.characterOwner + self.playerList.length - 1) % self.playerList.length;
             var right = (self.characterOwner + 1) % self.playerList.length;
             self.playerCoins[self.characterOwner] += 2;
             self.playerCoins[left] -= 1;
