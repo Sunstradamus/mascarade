@@ -389,6 +389,7 @@ var GameServer = function() {
                         self.userList[msg.other].card = temp;
                       }
                       self.state = GameServerState.STARTED_NORMAL;
+                      self.characterOwner = -1;
                       setImmediate(self.processGameState);
                     } else {
                       con.send(JSON.stringify({ id: 103 }));
@@ -402,6 +403,7 @@ var GameServer = function() {
                     self.playerCoins[self.characterOwner] = self.playerCoins[targetIndex];
                     self.playerCoins[targetIndex] = temp;
                     self.state = GameServerState.STARTED_NORMAL;
+                    self.characterOwner = -1;
                     setImmediate(self.processGameState);
                     break;
                   case GameCard.SPY:
@@ -443,6 +445,7 @@ var GameServer = function() {
                         self.userList[self.playerList[self.characterOwner]].card = temp;
                       }
                       self.state = GameServerState.STARTED_NORMAL;
+                      self.characterOwner = -1;
                       setImmediate(self.processGameState);
                     } else {
                       con.send(JSON.stringify({ id: 103 }));
@@ -461,6 +464,7 @@ var GameServer = function() {
                       }
                       self.inquired = -1;
                       self.state = GameServerState.STARTED_NORMAL;
+                      self.characterOwner = -1;
                       setImmediate(self.processGameState);
                     } else {
                       con.send(JSON.stringify({ id: 103 }));
@@ -844,11 +848,17 @@ var GameServer = function() {
         break;
       // TODO: Finish turn
       case GameServerState.STARTED_PROCESS_CLAIM:
+        if (self.characterOwner === -1) {
+          self.state = GameServerState.STARTED_NORMAL;
+          clearTimeout(self.gameLoop);
+          setImmediate(self.processGameState);
+        }
         switch(self.claimedCharacter) {
           case GameCard.JUDGE:
             self.playerCoins[self.characterOwner] += self.courtCoins;
             self.courtCoins = 0;
             self.state = GameServerState.STARTED_NORMAL;
+            self.characterOwner = -1;
             clearTimeout(self.gameLoop);
             setImmediate(self.processGameState);
             break;
@@ -866,12 +876,14 @@ var GameServer = function() {
             self.playerCoins[self.characterOwner] += 2;
             self.playerCoins[richestPlayer] -= 2;
             self.state = GameServerState.STARTED_NORMAL;
+            self.characterOwner = -1;
             clearTimeout(self.gameLoop);
             setImmediate(self.processGameState);
             break;
           case GameCard.KING:
             self.playerCoins[self.characterOwner] += 3;
             self.state = GameServerState.STARTED_NORMAL;
+            self.characterOwner = -1;
             clearTimeout(self.gameLoop);
             setImmediate(self.processGameState);
             break;
@@ -883,6 +895,7 @@ var GameServer = function() {
           case GameCard.QUEEN:
             self.playerCoins[self.characterOwner] += 2;
             self.state = GameServerState.STARTED_NORMAL;
+            self.characterOwner = -1;
             clearTimeout(self.gameLoop);
             setImmediate(self.processGameState);
             break;
@@ -893,6 +906,7 @@ var GameServer = function() {
             self.playerCoins[left] -= 1;
             self.playerCoins[right] -= 1;
             self.state = GameServerState.STARTED_NORMAL;
+            self.characterOwner = -1;
             clearTimeout(self.gameLoop);
             setImmediate(self.processGameState);
             break;
@@ -913,6 +927,7 @@ var GameServer = function() {
             }
             self.secondPeasant = -1;
             self.state = GameServerState.STARTED_NORMAL;
+            self.characterOwner = -1;
             clearTimeout(self.gameLoop);
             setImmediate(self.processGameState);
             break;
@@ -922,6 +937,7 @@ var GameServer = function() {
               self.endGame(self.characterOwner);
             }
             self.state = GameServerState.STARTED_NORMAL;
+            self.characterOwner = -1;
             clearTimeout(self.gameLoop);
             setImmediate(self.processGameState);
             break;
@@ -934,6 +950,7 @@ var GameServer = function() {
               self.playerCoins[self.characterOwner] = 10;
             }
             self.state = GameServerState.STARTED_NORMAL;
+            self.characterOwner = -1;
             clearTimeout(self.gameLoop);
             setImmediate(self.processGameState);
             break;
@@ -943,6 +960,7 @@ var GameServer = function() {
         // This only ever gets invoked if player fails to respond in 30s
         // Card action gets skipped
         self.state = GameServerState.STARTED_NORMAL;
+        self.characterOwner = -1;
         clearTimeout(self.gameLoop);
         setImmediate(self.processGameState);
         break;
