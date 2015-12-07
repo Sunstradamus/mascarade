@@ -135,3 +135,7 @@
 .claim-card {
   cursor: pointer;
 }
+
+.court {
+  padding: 1em;
+}
