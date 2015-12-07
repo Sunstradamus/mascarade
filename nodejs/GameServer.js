@@ -372,7 +372,7 @@ var GameServer = function() {
               if (self.state === GameServerState.STARTED_PROCESS_STAGE_2 && msg.hasOwnProperty('target') && self.userList.hasOwnProperty(msg.target)) {
                 self.lastUserActivity = Date.now();
                 // Only the character owner can respond
-                if (self.characterOwner == self.playerList.indexOf(msg.username) || msg.target == msg.username) {
+                if (self.characterOwner !== self.playerList.indexOf(msg.username) || msg.target === msg.username) {
                   con.send(JSON.stringify({ id: 103 }));
                   break;
                 }
@@ -418,7 +418,7 @@ var GameServer = function() {
                   case GameCard.INQUISITOR:
                     clearTimeout(self.gameLoop);
                     self.broadcast(JSON.stringify({ id: 212, target: msg.target }));
-                    self.userList[target].connection.send(JSON.stringify({ id: 208 }));
+                    self.userList[msg.target].connection.send(JSON.stringify({ id: 208 }));
                     self.inquired = self.playerList.indexOf(msg.target);
                     self.state = GameServerState.STARTED_PROCESS_STAGE_3;
                     self.gameLoop = setTimeout(self.processGameState, 30000);
@@ -454,7 +454,7 @@ var GameServer = function() {
                     break;
                   case GameCard.INQUISITOR:
                     // Only the inquired can respond
-                    if (self.inquired == self.playerList.indexOf(msg.username)) {
+                    if (self.inquired !== self.playerList.indexOf(msg.username)) {
                       con.send(JSON.stringify({ id: 103 }));
                       break;
                     }
