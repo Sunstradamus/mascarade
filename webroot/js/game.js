@@ -949,7 +949,6 @@ var GameLog = React.createClass({
     var entries = [];
     var logID = 0;
     for (var entry in this.props.entries) {
-      console.log(this.props.entries[entry] );
       var individual = this.props.entries[entry]["private"];
       var chat = this.props.entries[entry].hasOwnProperty('chat');
       entries.push(React.createElement(

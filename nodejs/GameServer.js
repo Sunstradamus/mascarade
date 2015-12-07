@@ -372,7 +372,7 @@ var GameServer = function() {
               if (self.state === GameServerState.STARTED_PROCESS_STAGE_2 && msg.hasOwnProperty('target') && self.userList.hasOwnProperty(msg.target)) {
                 self.lastUserActivity = Date.now();
                 // Only the character owner can respond
-                if (self.characterOwner == self.playerList.indexOf(msg.username)) {
+                if (self.characterOwner == self.playerList.indexOf(msg.username) || msg.target == msg.username) {
                   con.send(JSON.stringify({ id: 103 }));
                   break;
                 }

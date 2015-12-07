@@ -13,3 +13,6 @@ What is in progress:
 
 Premade accounts:
   - testuser:password
+
+Notes:
+  - In dev mode/fake lobby mode, all bets are off and the game may function oddly. Things like turn constraints and targetting constraints are disabled and may send the server into a weird state. This mode is provided to quickly test some cards against dummy targets.
