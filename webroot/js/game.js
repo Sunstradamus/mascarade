@@ -71,7 +71,7 @@ var Box = React.createClass({
 
   onClose: function onClose(e) {
     console.log("websocket closed");
-    window.location.href = '/';
+    //window.location.href = '/';
   },
 
   onError: function onError(e) {
@@ -81,6 +81,16 @@ var Box = React.createClass({
   onMessage: function onMessage(e) {
     console.log(e.data);
     var msg = JSON.parse(e.data);
+    
+    if( msg.hasOwnProperty('turn') && msg['turn'] != this.state.turn && this.state.players[msg['turn']] != this.props.username ) {
+      
+      this.setState(function (prevState, currProps) {
+        prevState.entries.push({ 'private': false, 'message': "It's " + prevState.players[msg['turn']] + "'s turn!"});
+        return { entries: prevState.entries, myTurn: true, actions: msg['actions'] };
+      });
+    
+    }
+    
     
     if(!msg.hasOwnProperty('id')) {
       if(msg.hasOwnProperty('card')) {
@@ -98,7 +108,7 @@ var Box = React.createClass({
         } 
         else if( msg.hasOwnProperty('playerCards')) {
           cards = msg['playerCards'];
-        }
+        }   
       
         this.setState({ 
           gameState: msg['state'],
@@ -121,7 +131,7 @@ var Box = React.createClass({
         case 2:
           // Authentication approved
           this.setState(function (prevState, currProps) {
-            prevState.entries.push({ 'private': true, 'message': "Connected to game lobby" });
+            prevState.entries.push({ 'private': false, 'message': this.props.username + " has connected to the game lobby." });
             return { entries: prevState.entries };
           });
           this.setState({ auth: msg['auth'] });
@@ -129,7 +139,7 @@ var Box = React.createClass({
         case 5:
           // Turn notification & actions permitted
           this.setState(function (prevState, currProps) {
-            prevState.entries.push({ 'private': true, 'message': "It's your turn!" });
+            prevState.entries.push({ 'private': false, 'message': "It's your turn!" });
             return { entries: prevState.entries, myTurn: true, actions: msg['actions'] };
           });
           break;
@@ -157,6 +167,15 @@ var Box = React.createClass({
               }
             },
           });          
+          break;
+        case 10:
+        
+          // If you don't like having chat messages in the game log, feel free to change this
+        
+          this.setState(function (prevState, currProps) {
+            prevState.entries.push({ 'private': false, chat: true, 'message': msg['user'] + ": " + msg['msg'] });
+            return { entries: prevState.entries, myTurn: true, actions: msg['actions'] };
+          });
           break;
         case 100:
           // Regenerated authentication key
@@ -209,13 +228,15 @@ var Box = React.createClass({
           });
           break;
         case 201:
-          // Player has looked at their own cards
-          console.log(this.state.players);
-          console.log(this.state.turn);
-          this.setState(function (prevState, currProps) {
-            prevState.entries.push({ 'private': false, 'message': prevState.players[prevState.turn] + " checked their card" });
-            return { entries: prevState.entries };
-          });
+          // A player has looked at their own card
+          if( this.state.players[this.state.turn] != this.props.username ) {
+            
+            this.setState(function (prevState, currProps) {
+              prevState.entries.push({ 'private': false, 'message': prevState.players[prevState.turn] + " checked their card" });
+              return { entries: prevState.entries };
+            });
+          
+          }
           break;
         case 202:
           // Player has claimed a character
@@ -300,6 +321,9 @@ var Box = React.createClass({
         
       }
     }
+    
+    
+    
   },
   
   // --------------------------------------------------------------- buildMessage
@@ -364,6 +388,12 @@ var Box = React.createClass({
     }
   },
   
+  sendChat: function(message) {
+    $.extend( message, this.buildMessage(8));
+    console.log(message);
+    this.state.websocket.send(JSON.stringify( message ));
+  },
+  
   
   leaveLobby: function(e) {
     this.state.websocket.send(JSON.stringify( this.buildMessage(4) ));
@@ -418,7 +448,8 @@ var Box = React.createClass({
     return React.createElement(
       'div',
       { className: 'container game-area' },
-      React.createElement(GameLog, { entries: this.state.entries }),
+      React.createElement(GameLog, { entries: this.state.entries,
+                                     sendChat: this.sendChat }),
       React.createElement(GameArena, { 
         // parameters
         middle: this.state.middle,
@@ -891,21 +922,49 @@ var ActionArea = React.createClass({
 // --------------------------------------------------------------------- GameLog
 var GameLog = React.createClass({
   displayName: 'GameLog',
+  
+  getInitialState: function() {
+    return { text: "" };
+  },
+  
+  submitMessageEnter: function(e) {
+    if (e.keyCode == 13) {
+      this.props.sendChat( { text: this.state.text } );
+      this.setState({ text: "" });
+    }
+  },
+  
+  submitMessage: function(e) {
+    e.preventDefault();
+    this.props.sendChat( { text: this.state.text } );
+    this.setState({ text: "" });
+  },
+  
+  collectText: function(e) {
+    this.setState({ text: e.target.value });
+  },
 
   render: function render() {
 
     var entries = [];
     var logID = 0;
     for (var entry in this.props.entries) {
+      console.log(this.props.entries[entry] );
       var individual = this.props.entries[entry]["private"];
+      var chat = this.props.entries[entry].hasOwnProperty('chat');
       entries.push(React.createElement(
         'li',
-        { className: individual ? "private entry" : "entry", key: "entry_" + logID.toString() },
+        { className: "entry" + (individual ? " private" : "") + (chat ? " chat" : ""), key: "entry_" + logID.toString() },
         this.props.entries[entry]["message"]
       ));
       logID++;
     }
     
+    var textBox = React.createElement(
+                    'input',
+                    { onChange: this.collectText, id: 'chatbox', value: this.state.text, onKeyPress: this.submitMessageEnter }
+                    );
+   
     return React.createElement(
       'div',
       { className: 'col-sm-3 hidden-xs' },
@@ -917,7 +976,13 @@ var GameLog = React.createClass({
           { className: 'log-entries' },
           entries
         )
-      )
+      ),
+      textBox,
+      React.createElement(
+        'a',
+        { onClick: this.submitMessage, className: 'btn btn-default' },
+        'Send chat'
+      )      
     );
   }
 });

@@ -42,6 +42,6 @@ $("document").ready(function() {
   }
 
   getLobbies();
-  setInterval(getLobbies, 300000);
+  setInterval(getLobbies, 10000);
 
 });

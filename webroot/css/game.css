@@ -116,6 +116,10 @@
   color: #90F;
 }
 
+.chat {
+  color: #999;
+}
+
 .need-target {
   border: 2px solid #fff;
   border-radius: 1px;
