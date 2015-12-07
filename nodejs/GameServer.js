@@ -820,6 +820,7 @@ var GameServer = function() {
           clearTimeout(self.gameLoop);
           setImmediate(self.processGameState);
         } else {
+          self.characterOwner = -1;
           cards[self.turn] = self.userList[self.playerList[self.turn]].card;
           self.playerCoins[self.turn] -= 1;
           self.courtCoins += 1;
@@ -852,6 +853,7 @@ var GameServer = function() {
           self.state = GameServerState.STARTED_NORMAL;
           clearTimeout(self.gameLoop);
           setImmediate(self.processGameState);
+          break;
         }
         switch(self.claimedCharacter) {
           case GameCard.JUDGE:
