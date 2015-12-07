@@ -87,7 +87,15 @@ var Box = React.createClass({
       
       this.setState(function (prevState, currProps) {
         prevState.entries.push({ 'private': false, 'message': "It's " + prevState.players[msg['turn']] + "'s turn!"});
-        return { entries: prevState.entries, myTurn: true, actions: msg['actions'] };
+        
+        // current turn changed; remove potentially lying around intermediate states
+        
+        return { entries: prevState.entries,
+                 myTurn: true, actions: msg['actions'],
+                 needTarget: false,
+                 needMultiTarget: false,
+                 gameStateSpecial: 0,
+                 multiTarget: [], };
       });
     
     }
@@ -295,7 +303,7 @@ var Box = React.createClass({
           break;
         case 209:
           this.setState(function (prevState, currProps) {
-            prevState.entries.push({ 'private': false, 'message': prevState.players[msg['target']] + " and " + prevState.players[msg['other']] + " might have had their cards swapped!" });
+            prevState.entries.push({ 'private': false, 'message': msg['target'] + " and " + msg['other'] + " might have had their cards swapped!" });
             return { entries: prevState.entries };
           });
           break;
@@ -348,10 +356,12 @@ var Box = React.createClass({
   },
   
   sendAction: function(message) {
+    console.log("YES IM HERE");
+    console.log(message);
     var id = message.hasOwnProperty('act') ? 5 : 7 // no act means it's a character
     var messageToSend = this.buildMessage(id);
     
-    if(this.state.GAME_STATE_SPECIAL == 996) { // special stuff for fool
+    if(this.state.gameStateSpecial == 996) { // special stuff for fool
       messageToSend['target'] = this.state.multiTarget[0];
       messageToSend['other'] = this.state.multiTarget[1];
       this.setState({ needMultiTarget: false, needTarget: false, multiTarget: [] });
@@ -410,14 +420,14 @@ var Box = React.createClass({
   
   getTargetOne(target) {
     this.setState( function (prevState, currProps) {
-      prevState.multiTarget.push( target );
+      prevState.multiTarget.push( target['target'] );
       return{ multiTarget: prevState.multiTarget };
     });
   },
   
   getTargetTwo(target) {
     this.setState( function (prevState, currProps) {
-      prevState.multiTarget.push( target );
+      prevState.multiTarget.push( target['target'] );
       return{ multiTarget: prevState.multiTarget };
     });
     this.setState({ needMultiTarget: false, needTarget: false, gameStateSpecial: 996 });
@@ -464,6 +474,7 @@ var Box = React.createClass({
         playerCards: this.state.playerCards,
         playerCoins: this.state.playerCoins,
         gameState: this.state.gameState,
+        gameStateSpecial: this.state.gameStateSpecial,
         myTurn: this.state.myTurn,
         needTarget: this.state.needTarget,
         multiTarget: this.state.multiTarget,
@@ -549,6 +560,7 @@ var GameArena = React.createClass({
         gameCards: this.props.gameCards,
         myTurn: this.props.myTurn,
         gameState: this.props.gameState,
+        gameStateSpecial: this.props.gameStateSpecial,
         actions: this.props.actions,
         myName: this.props.playerName,
         myCoins: myCoins,
@@ -762,20 +774,20 @@ var ActionArea = React.createClass({
   
   swap: function(e) {
     e.preventDefault();
-    if(this.props.myTurn && this.props.GAME_STATE_SPECIAL != this.SPECIAL_FOOL_READY ) {
+    if(this.props.myTurn && this.props.gameStateSpecial != this.SPECIAL_FOOL_READY ) {
       this.props.getActionForTarget({ act: this.SWAP_CARD, fake: false });
     }
-    else if( this.props.GAME_STATE_SPECIAL == this.SPECIAL_FOOL_READY ) {
+    else if( this.props.gameStateSpecial == this.SPECIAL_FOOL_READY ) {
       this.props.sendAction({ fake: 0 });
     }
   },
   
   fake: function(e) {
     e.preventDefault();
-    if(this.props.myTurn && this.props.GAME_STATE_SPECIAL != this.SPECIAL_FOOL_READY ){
+    if(this.props.myTurn && this.props.gameStateSpecial != this.SPECIAL_FOOL_READY ){
       this.props.getActionForTarget({ act: this.SWAP_CARD, fake: true });
     }
-    else if( this.props.GAME_STATE_SPECIAL == this.SPECIAL_FOOL_READY ) {
+    else if( this.props.gameStateSpecial == this.SPECIAL_FOOL_READY ) {
       this.props.sendAction({ fake: 1 });
     }
   },
@@ -844,10 +856,10 @@ var ActionArea = React.createClass({
                       'div',
                       { className: 'col-sm-8 buttons-area' },
                       React.createElement('img', { className: "col-sm-6 action-button",
-                                                   src: "images/zipboys/swapPressed.png",
+                                                   src: "images/zipboys/swapPress.png",
                                                    onClick: null }),
                       React.createElement('img', { className: "col-sm-6 action-button",
-                                                   src: "images/zipboys/fakePressed.png",
+                                                   src: "images/zipboys/fakePress.png",
                                                    onClick: null })
                       );
     }      
@@ -856,10 +868,10 @@ var ActionArea = React.createClass({
       buttonsArea = React.createElement(
                       'div',
                       { className: 'col-sm-8 buttons-area' },
-                      React.createElement('img', { className: "col-sm-6 action-button",
+                      React.createElement('img', { className: "col-sm-6 action-button available",
                                                    src: "images/zipboys/swap.png",
                                                    onClick: this.swap }),
-                      React.createElement('img', { className: "col-sm-6 action-button",
+                      React.createElement('img', { className: "col-sm-6 action-button available",
                                                    src: "images/zipboys/fake.png",
                                                    onClick: this.fake })
                       );
