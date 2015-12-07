@@ -30,7 +30,8 @@ var Box = React.createClass({
       revealedCards: {},
       needMultiTarget: false,
       multiTarget: [],
-      preservedTarget: {}
+      preservedTarget: {},
+      courtCoins: 0
     };
   },
 
@@ -71,7 +72,7 @@ var Box = React.createClass({
 
   onClose: function onClose(e) {
     console.log("websocket closed");
-    //window.location.href = '/';
+    window.location.href = '/';
   },
 
   onError: function onError(e) {
@@ -118,6 +119,7 @@ var Box = React.createClass({
           playerCoins: msg.hasOwnProperty('playerCoins') ? msg['playerCoins'] : this.state.playerCoins,
           middle: msg.hasOwnProperty('middle') ? msg['middle'] : [],
           turn: msg.hasOwnProperty('turn') ? msg['turn'] : this.state.turn,
+          courtCoins: msg.hasOwnProperty('courtCoins') ? msg['courtCoins'] : this.state.courtCoins
         });
       }
     }
@@ -130,10 +132,6 @@ var Box = React.createClass({
           break;
         case 2:
           // Authentication approved
-          this.setState(function (prevState, currProps) {
-            prevState.entries.push({ 'private': false, 'message': this.props.username + " has connected to the game lobby." });
-            return { entries: prevState.entries };
-          });
           this.setState({ auth: msg['auth'] });
           break;
         case 5:
@@ -175,6 +173,13 @@ var Box = React.createClass({
           this.setState(function (prevState, currProps) {
             prevState.entries.push({ 'private': false, chat: true, 'message': msg['user'] + ": " + msg['msg'] });
             return { entries: prevState.entries, myTurn: true, actions: msg['actions'] };
+          });
+          break;
+        case 12:
+          // user joined the room
+          this.setState( function (prevState, currProps) {
+            prevState.entries.push({ 'private': false, 'message': msg['user'] + " has connected to the game lobby." });
+            return { entries: prevState.entries };
           });
           break;
         case 100:
@@ -465,6 +470,7 @@ var Box = React.createClass({
         actions: this.state.actions,
         gameCards: this.state.gameCards,
         preservedTarget: this.state.multiTarget,
+        courtCoins: this.state.courtCoins,
         
         // functions
         sendAction: this.sendAction,
@@ -537,6 +543,7 @@ var GameArena = React.createClass({
         multiTarget: this.props.multiTarget,
         needTarget: this.props.needTarget,
         preservedTarget: this.props.preservedTarget,
+        courtCoins: this.props.courtCoins,
         sendActionWithTarget: this.props.sendActionWithTarget }),
       React.createElement(ActionArea, { 
         gameCards: this.props.gameCards,
@@ -638,6 +645,11 @@ var CardArea = React.createClass({
                                      sendActionWithTarget: this.props.sendActionWithTarget,
                                      offset: topOffset, 
                                      cards: topCards }),
+      React.createElement(
+        'span',
+        {className: 'row court gold'},
+        "Courthouse gold: " + this.props.courtCoins
+      ),
       React.createElement(CardRow, { needTarget: this.props.needTarget, 
                                      sendActionWithTarget: this.props.sendActionWithTarget,
                                      offset: botOffset,
@@ -928,6 +940,7 @@ var GameLog = React.createClass({
   },
   
   submitMessageEnter: function(e) {
+    console.log(e);
     if (e.keyCode == 13) {
       this.props.sendChat( { text: this.state.text } );
       this.setState({ text: "" });
@@ -961,7 +974,7 @@ var GameLog = React.createClass({
     
     var textBox = React.createElement(
                     'input',
-                    { onChange: this.collectText, id: 'chatbox', value: this.state.text, onKeyPress: this.submitMessageEnter }
+                    { onChange: this.collectText, id: 'chatbox', value: this.state.text, onKeyDown: this.submitMessageEnter }
                     );
    
     return React.createElement(
