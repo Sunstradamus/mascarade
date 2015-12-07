@@ -35,6 +35,9 @@ Recv:
 11 - Lobby has already started, cannot join
 	{"id": 11}
 
+12 - User joined lobby
+	{"id": 12, "user": "fakeuser1"};
+
 
 100 - Regenerated authentication key
 	auth

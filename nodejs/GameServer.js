@@ -100,6 +100,7 @@ var GameServer = function() {
                     }
                     self.userList[msg.username] = { connection: con, auth: authKey };
                     con.send(JSON.stringify({ id: 2, auth: authKey }));
+                    self.broadcast(JSON.stringify({ id: 12, user: msg.username }));
                   } else {
                     con.send(JSON.stringify({ id: 8 }));
                   }
