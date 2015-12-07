@@ -563,9 +563,16 @@ var GameServer = function() {
   }
 
   self.broadcast = function(msg) {
-    for (var i = self.playerList.length - 1; i >= 0; i--) {
-      self.userList[self.playerList[i]].connection.send(msg);
-    };
+    if (self.state !== GameServerState.WAITING_FOR_USERS) {
+      for (var i = self.playerList.length - 1; i >= 0; i--) {
+        self.userList[self.playerList[i]].connection.send(msg);
+      };
+    } else {
+      var players = Object.keys(self.userList);
+      for (var i = players.length - 1; i >= 0; i--) {
+        self.userList[players[i]].connection.send(msg);
+      };
+    }
   };
 
   self.checkGameEnd = function() {
