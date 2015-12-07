@@ -99,7 +99,7 @@ var GameServer = function() {
                       self.lobbyHost = msg.username;
                     }
                     self.userList[msg.username] = { connection: con, auth: authKey };
-                    con.send(JSON.stringify({ id: 2, auth: authKey }));
+                    con.send(JSON.stringify({ id: 2, auth: authKey, users: Object.keys(self.userList) }));
                     self.broadcast(JSON.stringify({ id: 12, user: msg.username }));
                   } else {
                     con.send(JSON.stringify({ id: 8 }));
@@ -552,6 +552,7 @@ var GameServer = function() {
         if (self.userList[users[i]].connection === con) {
           if (self.state === GameServerState.WAITING_FOR_USERS) {
             delete self.userList[users[i]];
+            self.broadcast(JSON.stringify({ id: 13, user: users[i] }));
           } else {
             self.userList[users[i]].connection.send = function() {};
           }

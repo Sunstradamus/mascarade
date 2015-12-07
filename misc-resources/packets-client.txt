@@ -4,8 +4,9 @@ Recv:
 
 2 - Authentication approved
 	auth
+	users
 
-	{"id": 2, "auth": 1}
+	{"id": 2, "auth": 1, "users": ["fakeuser1", "fakeuser2"]}
 
 3 - Not Used
 
@@ -37,6 +38,10 @@ Recv:
 
 12 - User joined lobby
 	{"id": 12, "user": "fakeuser1"};
+
+13 - User left lobby
+	{"id": 13, "user": "fakeuser1"};
+
 
 
 100 - Regenerated authentication key
