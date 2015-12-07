@@ -115,7 +115,7 @@ var Box = React.createClass({
           // current turn changed; remove potentially lying around intermediate states
           
           return { entries: prevState.entries,
-                   myTurn: true, actions: msg['actions'],
+                   myCard: -1,
                    needTarget: false,
                    needMultiTarget: false,
                    gameStateSpecial: 0,
@@ -491,13 +491,18 @@ var Box = React.createClass({
         playerCards: this.state.playerCards,
         playerCoins: this.state.playerCoins,
         gameState: this.state.gameState,
+        
+        // things that affect what the user can do
         gameStateSpecial: this.state.gameStateSpecial,
         myTurn: this.state.myTurn,
+        myCard: this.state.myCard,
+        actions: this.state.actions,
+        
+        // things that affect the card area
         needTarget: this.state.needTarget,
         multiTarget: this.state.multiTarget,
-        actions: this.state.actions,
         gameCards: this.state.gameCards,
-        preservedTarget: this.state.multiTarget,
+        preservedTarget: this.state.preservedTarget,
         courtCoins: this.state.courtCoins,
         
         // functions
