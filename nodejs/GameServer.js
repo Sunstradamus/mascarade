@@ -769,12 +769,12 @@ var GameServer = function() {
     switch(self.state) {
       case GameServerState.STARTED_FORCE_SWAP:
         self.advanceTurn();
-        self.broadcast(JSON.stringify({ state: self.state, players: self.playerList, playerCoins: self.playerCoins, turn: self.turn }));
+        self.broadcast(JSON.stringify({ state: self.state, players: self.playerList, playerCoins: self.playerCoins, courtCoins: self.courtCoins, turn: self.turn }));
         self.userList[self.playerList[self.turn]].connection.send(JSON.stringify({ id: 5, actions: GameAction.SWAP_CARD }));
         break;
       case GameServerState.STARTED_NORMAL:
         self.advanceTurn();
-        self.broadcast(JSON.stringify({ state: self.state, players: self.playerList, playerCoins: self.playerCoins, turn: self.turn }));
+        self.broadcast(JSON.stringify({ state: self.state, players: self.playerList, playerCoins: self.playerCoins, courtCoins: self.courtCoins, turn: self.turn }));
         self.userList[self.playerList[self.turn]].connection.send(JSON.stringify({ id: 5, actions: GameAction.SWAP_CARD | GameAction.VIEW_OWN_CARD | GameAction.CLAIM_CHARACTER }));
         break;
       case GameServerState.STARTED_CLAIM_CHARACTER:
@@ -792,7 +792,7 @@ var GameServer = function() {
           setImmediate(self.processGameState);
           return;
         } else {
-          self.broadcast(JSON.stringify({ state: self.state, players: self.playerList, playerCoins: self.playerCoins, turn: self.turn, claimed: self.claimedCharacter }));
+          self.broadcast(JSON.stringify({ state: self.state, players: self.playerList, playerCoins: self.playerCoins, courtCoins: self.courtCoins, turn: self.turn, claimed: self.claimedCharacter }));
           self.doneWaiting = true;
         }
         break;
@@ -811,7 +811,7 @@ var GameServer = function() {
               self.secondPeasant = playerIndex;
             }
           }
-          self.broadcast(JSON.stringify({ state: self.state, players: self.playerList, playerCoins: self.playerCoins, revealedCards: cards, turn: self.turn }));
+          self.broadcast(JSON.stringify({ state: self.state, players: self.playerList, playerCoins: self.playerCoins, courtCoins: self.courtCoins, revealedCards: cards, turn: self.turn }));
           self.state = GameServerState.STARTED_PROCESS_CLAIM;
           clearTimeout(self.gameLoop);
           setImmediate(self.processGameState);
@@ -836,7 +836,7 @@ var GameServer = function() {
               self.playerCoins[playerIndex] -= 1;
             }
           }
-          self.broadcast(JSON.stringify({ state: self.state, players: self.playerList, playerCoins: self.playerCoins, revealedCards: cards, turn: self.turn }));
+          self.broadcast(JSON.stringify({ state: self.state, players: self.playerList, playerCoins: self.playerCoins, courtCoins: self.courtCoins, revealedCards: cards, turn: self.turn }));
           self.state = GameServerState.STARTED_PROCESS_CLAIM;
           clearTimeout(self.gameLoop);
           setImmediate(self.processGameState);
@@ -995,7 +995,7 @@ var GameServer = function() {
       self.turn = -1;
       self.forceSwapCount = 0;
       self.dealCards();
-      self.broadcast(JSON.stringify({ players: self.playerList, playerCards: self.playerCards, playerCoins: self.playerCoins, middle: self.centerCards }));
+      self.broadcast(JSON.stringify({ players: self.playerList, playerCards: self.playerCards, playerCoins: self.playerCoins, courtCoins: self.courtCoins, middle: self.centerCards }));
       // Start the game loop
       self.gameLoop = setTimeout(self.processGameState, 30000);
       // Start the game
