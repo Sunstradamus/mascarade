@@ -81,7 +81,9 @@ var Box = React.createClass({
 
   onClose: function onClose(e) {
     console.log("websocket closed");
-    window.location.href = '/';
+    if(!this.state.hasWinner) {
+      window.location.href = '/';
+    }
   },
 
   onError: function onError(e) {
@@ -272,7 +274,7 @@ var Box = React.createClass({
         case 104:
           // Game Over, one winner
           this.setState(function (prevState, currProps) {
-            prevState.entries.push({ 'private': false, 'message': "Game Over! " + msg['winner'] + " wins!" });
+            prevState.entries.push({ 'private': false, 'message': "Game Over! " + prevState.players[msg['winner']] + " wins!" });
             return { entries: prevState.entries, hasWinner: true };
           });
           break;
@@ -281,7 +283,7 @@ var Box = React.createClass({
           this.setState(function (prevState, currProps) {
             var winners = []
             for( var i = 0 ; i < msg['players'].length ; i++) {
-              winners.push( msg['players'] );
+              winners.push( prevState.players[msg['players']] );
             }
             prevState.entries.push({ 'private': false, 'message': "Game Over! " + winners.join(', ') + " win!" });
             return { entries: prevState.entries, hasWinner: true };
@@ -549,7 +551,7 @@ var Box = React.createClass({
         sendActionWithTarget: targetSelectorFunction,
         sendContest: this.sendContest
       }),
-      this.state.host ? React.createElement(
+      (this.state.host && this.state.gameState == 0) ? React.createElement(
         'a',
         { className:'btn btn-info', href: '#', onClick: this.startGame },
         'start game'
@@ -561,7 +563,7 @@ var Box = React.createClass({
       ) : "",
       React.createElement(
         'a',
-        { className:'btn btn-info', href: '#', onClick: this.leaveLobby },
+        { className:'btn btn-info', href: this.state.hasWinner ? '/' : '#', onClick: this.leaveLobby },
         'Leave lobby'
       ),
       React.createElement(
