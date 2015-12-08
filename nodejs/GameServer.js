@@ -402,7 +402,7 @@ var GameServer = function() {
                 switch(self.claimedCharacter) {
                   case GameCard.SPY:
                     // Only the character owner can respond
-                    if (self.characterOwner == self.playerList.indexOf(msg.username)) {
+                    if (self.characterOwner !== self.playerList.indexOf(msg.username)) {
                       con.send(JSON.stringify({ id: 103 }));
                       break;
                     }
