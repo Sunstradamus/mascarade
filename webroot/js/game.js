@@ -2,6 +2,8 @@
 
 var Box = React.createClass({
   
+  DEBUG: false,
+  
   // store basically all state in Box, pass to children as props
   
   displayName: 'Box',
@@ -34,7 +36,8 @@ var Box = React.createClass({
       preservedTarget: {},       // used to store the last card the user picked (used for spy)
       courtCoins: 0,             // coins in the courthouse
       firstTurnFlag: true,       // special flag to tell react not to hide which cards people have before the game starts
-      timerInterval: null        // interval javascript variable for the timer
+      timerInterval: null,       // interval javascript variable for the timer
+      debug: this.DEBUG          // if true, show the custom message field
     };
   },
 
@@ -541,11 +544,11 @@ var Box = React.createClass({
         { className:'btn btn-info', href: '#', onClick: this.startGame },
         'start game'
       ),
-      React.createElement(
+      this.state.debug ? React.createElement(
         'a',
         { className:'btn btn-info', href: '#', onClick: this.startGameWithFake },
-        'start game with fake'
-      ),
+        'start game with 12 fake users'
+      ) : "",
       React.createElement(
         'a',
         { className:'btn btn-info', href: '#', onClick: this.leaveLobby },
@@ -555,15 +558,15 @@ var Box = React.createClass({
         'br',
         {}
       ),
-      React.createElement(
+      this.state.debug ? React.createElement(
         'input',
         { onChange: this.handleChange }
-      ),
-      React.createElement(
+      ) : "",
+      this.state.debug ? React.createElement(
         'a',
         { className:'btn btn-default', href: '#', onClick: this.submitCustom },
         'submit custom message'
-      )
+      ) : ""
     );
   }
 });
@@ -1083,7 +1086,7 @@ var GameLog = React.createClass({
       textBox,
       React.createElement(
         'a',
-        { onClick: this.submitMessage, className: 'btn btn-default' },
+        { onClick: this.submitMessage, className: 'btn btn-default', id: 'chat-send' },
         'Send chat'
       )      
     );

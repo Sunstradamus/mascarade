@@ -91,7 +91,7 @@
   background: #4c0099;
   background: rgba(26, 0, 63, 0.4);
   position: relative;
-  overflow-y: hidden;
+  overflow-y: auto;
 }
 
 .game-arena {
@@ -156,4 +156,13 @@
   color: #fc0;
   font-size: larger;
   display: none;
+}
+
+#chatbox {
+  width: 100%;
+  border: 1px solid #fc0;
+}
+
+#chat-send {
+  width: 100%;
 }
