@@ -818,7 +818,7 @@ var GameServer = function() {
         break;
       case GameServerState.STARTED_NORMAL:
         self.advanceTurn();
-        if (self.userList[self.playerList[self.turn]].revealed != -1 && (self.userList[self.playerList[self.turn]].revealed - 1) === self.turn) {
+        if (self.userList[self.playerList[self.turn]].revealed != -1 && ((self.userList[self.playerList[self.turn]].revealed + self.playerList.length - 1) % self.playerList.length) === self.turn) {
           // Player was revealed last turn, force swap.
           self.state = GameServerState.STARTED_REVEAL_SWAP;
           self.userList[self.playerList[self.turn]].revealed = -1;
