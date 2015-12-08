@@ -7,40 +7,11 @@ var lobbyId = process.argv[2],
     lobbyKey = process.argv[4],
     request = require('http').request,
     getReq = require('http').get,
+    GameServerState = require('./GameConstants.js').GameServerState,
+    GameCard = require('./GameConstants.js').GameCard,
+    GameAction = require('./GameConstants.js').GameAction,
     WebSocketServer = require('ws').Server,
     wss = new WebSocketServer({ port: lobbyPort, path: '/'+lobbyId });
-// TODO: Refactor state enum into its own file
-var GameServerState = Object.freeze({
-  WAITING_FOR_USERS: 0,
-  STARTED_FORCE_SWAP: 1,
-  STARTED_NORMAL: 2,
-  STARTED_CLAIM_CHARACTER: 3,
-  STARTED_CONTEST_CLAIM: 4,
-  STARTED_PROCESS_CLAIM: 5,
-  STARTED_PROCESS_STAGE_2: 6,
-  STARTED_PROCESS_STAGE_3: 7,
-});
-// TODO: Cards in own file
-var GameCard = Object.freeze({
-  JUDGE: 0,
-  BISHOP: 1,
-  KING: 2,
-  FOOL: 3,
-  QUEEN: 4,
-  THIEF: 5,
-  WITCH: 6,
-  SPY: 7,
-  PEASANT: 8,
-  CHEAT: 9,
-  INQUISITOR: 10,
-  WIDOW: 11,
-});
-// TODO: Actions in own file
-var GameAction = Object.freeze({
-  SWAP_CARD: 0,
-  VIEW_OWN_CARD: 1,
-  CLAIM_CHARACTER: 2,
-});
 // TODO: Refactor GS into its own file
 var GameServer = function() {
 
@@ -1046,17 +1017,7 @@ var GameServer = function() {
         return;
       case 'error':
         var postData = 'msg='+payload;
-        var opts = {
-          hostname: 'localhost',
-          port: '8000',
-          path: '/error?id='+lobbyId+"&key="+lobbyKey,
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'Content-Length': Buffer.byteLength(postData)
-          }
-        };
-        var req = request(opts, function(res) {
+        var req = request({ hostname: 'localhost', port: '8000', path: '/error?id='+lobbyId+"&key="+lobbyKey, method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Content-Length': Buffer.byteLength(postData) } }, function(res) {
           process.exit();
         }).on('error', function(err) {
           console.log(err);
@@ -1070,6 +1031,20 @@ var GameServer = function() {
         var req = request({ hostname: 'localhost', port: '8000', path: '/winner?id='+lobbyId+"&key="+lobbyKey, method: 'POST', headers: {'Content-Type':'application/json'} }, function(res) {
           process.exit();
         }).on('error', function(err) {
+          console.log(err);
+          process.exit();
+        });
+        req.write(postData);
+        req.end();
+        return;
+      case 'update':
+        if (self.state === GameServerState.WAITING_FOR_USERS) {
+          var postData = JSON.stringify({ state: self.state, players: Object.keys(self.userList), host: self.lobbyHost });
+        } else {
+          var postData = JSON.stringify({ state: self.state, players: self.playerList, playerCoins: self.playerCoins, courtCoins: self.courtCoins });
+        }
+        var req = request({ hostname: 'localhost', port: '8000', path: '/update?id='+lobbyId+"&key="+lobbyKey, method: 'POST', headers: {'Content-Type':'application/json'} });
+        req.on('error', function(err) {
           console.log(err);
           process.exit();
         });

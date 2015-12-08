@@ -18,7 +18,8 @@ switch (mode) {
         http = require('http'),
         hmac = require('crypto').createHmac,
         parser = require('url').parse,
-        parsePost = require('querystring').parse;
+        parsePost = require('querystring').parse,
+        GameServerState = require('./GameConstants.js').GameServerState;
 
     var lobbies = {};
     var userTokens = {};
@@ -52,8 +53,8 @@ switch (mode) {
               }
               //spawn('node', ['/home/vagrant/project/nodejs/GameServer.js', id, basePort, LOBBY_KEY], { detached: true, stdio: ['ignore', process.stdout, process.stderr] });
               spawn('node', ['/home/vagrant/project/nodejs/GameServer.js', id, basePort, LOBBY_KEY], { detached: true });
-              lobbies[id] = { state: 0, port: basePort };
-              res.write(JSON.stringify({ id: id, state: 0, port: basePort }));
+              lobbies[id] = { state: GameServerState.WAITING_FOR_USERS, port: basePort };
+              res.write(JSON.stringify({ id: id, state: GameServerState.WAITING_FOR_USERS, port: basePort }));
               res.end();
               basePort += 1;
               if (basePort > 9080) {
@@ -139,6 +140,37 @@ switch (mode) {
                     };
                     console.log("Lobby ID "+url.query.id+" has ended with winners: "+winners);
                     delete lobbies[url.query.id];
+                    res.end();
+                  });
+                } else {
+                  res.statusCode = 400;
+                  res.end();
+                }
+              } else {
+                res.statusCode = 400;
+                res.end();
+              }
+              break;
+            case '/update':
+              if (url.query.id && url.query.key) {
+                if (lobbies.hasOwnProperty(url.query.id) && url.query.key === LOBBY_KEY) {
+                  var body = '';
+                  req.on('data', function (data) {
+                    body += data;
+                    if (body.length > 1e6) {
+                      req.connection.destroy();
+                    }
+                  });
+                  req.on('end', function() {
+                    var post = JSON.parse(body);
+                    lobbies[url.query.id].state = post.state;
+                    lobbies[url.query.id].players = post.players;
+                    if (post.state === GameServerState.WAITING_FOR_USERS) {
+                      lobbies[url.query.id].host = post.host;
+                    } else {
+                      lobbies[url.query.id].playerCoins = post.playerCoins;
+                      lobbies[url.query.id].courtCoins = post.courtCoins;
+                    }
                     res.end();
                   });
                 } else {
