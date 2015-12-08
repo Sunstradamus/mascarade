@@ -721,7 +721,7 @@ var GameServer = function() {
     self.contestResponder = []; // Array of players that don't contest the claim
     self.courtCoins = 0;
     self.doneWaiting = false;
-    self.enableTurnCheck = false;
+    self.enableTurnCheck = true;
     self.forceSwapCount = 0;
     self.inquired = -1; // ID of player that is being inquired
     self.keyLen = 1001; // Range X of authKeys where x = (max - min) + min

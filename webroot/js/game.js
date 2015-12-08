@@ -3,6 +3,7 @@
 var Box = React.createClass({
   
   DEBUG: false,
+  TIMER_LENGTH: 28, // client side, server will always be 30 seconds
   
   // store basically all state in Box, pass to children as props
   
@@ -37,7 +38,8 @@ var Box = React.createClass({
       courtCoins: 0,             // coins in the courthouse
       firstTurnFlag: true,       // special flag to tell react not to hide which cards people have before the game starts
       timerInterval: null,       // interval javascript variable for the timer
-      debug: this.DEBUG          // if true, show the custom message field
+      debug: this.DEBUG,         // if true, show the custom message field
+      hasWinner: false           // somebody has won 
     };
   },
 
@@ -78,7 +80,9 @@ var Box = React.createClass({
 
   onClose: function onClose(e) {
     console.log("websocket closed");
-    window.location.href = '/';
+    if (!this.state.hasWinner) {
+      window.location.href = '/';
+    }
   },
 
   onError: function onError(e) {
@@ -96,7 +100,7 @@ var Box = React.createClass({
              if (this.state.timerInterval != null) {
                clearInterval(this.state.timerInterval);
              }
-             this.setState({ timerInterval: startTimer(25) });
+             this.setState({ timerInterval: startTimer(this.TIMER_LENGTH) });
       }
       
       var cards = [];
@@ -262,8 +266,8 @@ var Box = React.createClass({
         case 104:
           // Game Over, one winner
           this.setState(function (prevState, currProps) {
-            prevState.entries.push({ 'private': false, 'message': "Game Over! " + prevState.players[msg['winner']] + " wins!" });
-            return { entries: prevState.entries };
+            prevState.entries.push({ 'private': false, 'message': "Game Over! " + msg['winner'] + " wins!" });
+            return { entries: prevState.entries, hasWinner: true };
           });
           break;
         case 105:
@@ -271,10 +275,10 @@ var Box = React.createClass({
           this.setState(function (prevState, currProps) {
             var winners = []
             for( var i = 0 ; i < msg['players'].length ; i++) {
-              winners.push( prevState.players[msg['players']]);
+              winners.push( msg['players'] );
             }
             prevState.entries.push({ 'private': false, 'message': "Game Over! " + winners.join(', ') + " win!" });
-            return { entries: prevState.entries };
+            return { entries: prevState.entries, hasWinner: true };
           });
           break;
         case 200:
@@ -1073,7 +1077,7 @@ var GameLog = React.createClass({
    
     return React.createElement(
       'div',
-      { className: 'col-sm-3 hidden-xs' },
+      { className: 'col-sm-3' },
       React.createElement(
         'div',
         { className: 'game-log' },
