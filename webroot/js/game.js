@@ -2,7 +2,7 @@
 
 var Box = React.createClass({
   
-  DEBUG: true,
+  DEBUG: false,  // change to enable the start with 12 fake users and a custom server message bar
   TIMER_LENGTH: 28, // client side, server will always be 30 seconds
   
   // store basically all state in Box, pass to children as props
@@ -39,7 +39,8 @@ var Box = React.createClass({
       firstTurnFlag: true,       // special flag to tell react not to hide which cards people have before the game starts
       timerInterval: null,       // interval javascript variable for the timer
       debug: this.DEBUG,         // if true, show the custom message field
-      hasWinner: false           // somebody has won 
+      hasWinner: false,          // somebody has won 
+      host: false                // user is host of this lobby
     };
   },
 
@@ -80,9 +81,7 @@ var Box = React.createClass({
 
   onClose: function onClose(e) {
     console.log("websocket closed");
-    if (!this.state.hasWinner) {
-      window.location.href = '/';
-    }
+    window.location.href = '/';
   },
 
   onError: function onError(e) {
@@ -236,6 +235,13 @@ var Box = React.createClass({
           this.setState( function (prevState, currProps) {
             prevState.entries.push({ 'private': false, 'message': msg['user'] + " has left the lobby." });
             return { entries: prevState.entries };
+          });
+          break;
+        case 14:
+          // you are the host
+          this.setState( function (prevState, currProps) {
+            prevState.entries.push({ 'private': true, 'message': "You are the host of this lobby!" });
+            return { entries: prevState.entries, host: true };
           });
           break;
         case 100:
@@ -543,11 +549,11 @@ var Box = React.createClass({
         sendActionWithTarget: targetSelectorFunction,
         sendContest: this.sendContest
       }),
-      React.createElement(
+      this.state.host ? React.createElement(
         'a',
         { className:'btn btn-info', href: '#', onClick: this.startGame },
         'start game'
-      ),
+      ) : "",
       this.state.debug ? React.createElement(
         'a',
         { className:'btn btn-info', href: '#', onClick: this.startGameWithFake },
