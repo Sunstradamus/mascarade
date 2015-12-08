@@ -3,6 +3,7 @@
 var Box = React.createClass({
   
   DEBUG: false,
+  TIMER_LENGTH: 28, // client side, server will always be 30 seconds
   
   // store basically all state in Box, pass to children as props
   
@@ -99,7 +100,7 @@ var Box = React.createClass({
              if (this.state.timerInterval != null) {
                clearInterval(this.state.timerInterval);
              }
-             this.setState({ timerInterval: startTimer(25) });
+             this.setState({ timerInterval: startTimer(this.TIMER_LENGTH) });
       }
       
       var cards = [];
