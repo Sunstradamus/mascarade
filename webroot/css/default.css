@@ -142,6 +142,12 @@
   width: auto
 }
 
+.action-explain {
+  max-height: 100px;
+  padding-bottom: 1em;
+  width: auto;
+}
+
 .rules-box {
   padding: 20px;
   color: #fc0;
