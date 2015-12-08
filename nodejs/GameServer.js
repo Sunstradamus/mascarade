@@ -219,6 +219,8 @@ var GameServer = function() {
                     }
                     self.broadcast(JSON.stringify({ id: 200, target: msg.target }));
                     self.state = GameServerState.STARTED_NORMAL;
+                    self.userList[msg.username].revealed = -1;
+                    self.resolveReveal = false;
                     self.gameLoop = setTimeout(self.processGameState, 30000);
                     self.processGameState();
                   } else {
@@ -818,7 +820,7 @@ var GameServer = function() {
         break;
       case GameServerState.STARTED_NORMAL:
         self.advanceTurn();
-        if (self.userList[self.playerList[self.turn]].revealed != -1 && (self.userList[self.playerList[self.turn]].revealed - 1) === self.turn) {
+        if (self.userList[self.playerList[self.turn]].revealed != -1 && ((self.userList[self.playerList[self.turn]].revealed + 1) % self.playerList.length) === self.turn) {
           // Player was revealed last turn, force swap.
           self.state = GameServerState.STARTED_REVEAL_SWAP;
           self.userList[self.playerList[self.turn]].revealed = -1;
