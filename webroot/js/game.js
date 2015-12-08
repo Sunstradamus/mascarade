@@ -75,7 +75,7 @@ var Box = React.createClass({
 
   onClose: function onClose(e) {
     console.log("websocket closed");
-    // window.location.href = '/';
+    window.location.href = '/';
   },
 
   onError: function onError(e) {
@@ -221,6 +221,13 @@ var Box = React.createClass({
           // user joined the room
           this.setState( function (prevState, currProps) {
             prevState.entries.push({ 'private': false, 'message': msg['user'] + " has connected to the game lobby." });
+            return { entries: prevState.entries };
+          });
+          break;
+        case 13:
+          // user left the room
+          this.setState( function (prevState, currProps) {
+            prevState.entries.push({ 'private': false, 'message': msg['user'] + " has left the lobby." });
             return { entries: prevState.entries };
           });
           break;
