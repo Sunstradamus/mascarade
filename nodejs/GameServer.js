@@ -68,6 +68,7 @@ var GameServer = function() {
                     var authKey = Math.floor(Math.random() * self.keyLen);
                     if (self.lobbyHost === '') {
                       self.lobbyHost = msg.username;
+                      con.send(JSON.stringify({ id: 14 }));
                     }
                     self.userList[msg.username] = { connection: con, auth: authKey };
                     con.send(JSON.stringify({ id: 2, auth: authKey, users: Object.keys(self.userList) }));
@@ -128,16 +129,6 @@ var GameServer = function() {
               } else {
                 self.userList[msg.username].connection.send = function() {};
                 con.terminate();
-              }
-              if (self.lobbyHost === msg.username) {
-                var usernames = Object.keys(self.userList);
-                var userCount = usernames.length;
-                if (userCount > 0) {
-                  self.lobbyHost = usernames[0];
-                } else {
-                  // If everyone leaves this lobby, do we just kill the server?
-                  self.lobbyHost = '';
-                }
               }
             } else {
               if (self.userList[msg.username].auth === msg.auth) {
@@ -532,6 +523,15 @@ var GameServer = function() {
         if (self.userList[users[i]].connection === con) {
           if (self.state === GameServerState.WAITING_FOR_USERS) {
             delete self.userList[users[i]];
+            if (users[i] == self.lobbyHost) {
+              var usernames = Object.keys(self.userList);
+              if (usernames.length > 0) {
+                self.lobbyHost = usernames[0];
+                self.userList[usernames[0]].connection.send(JSON.stringify({ id: 14 }));
+              } else {
+                self.lobbyHost = '';
+              }
+            }
             self.broadcast(JSON.stringify({ id: 13, user: users[i] }));
           } else {
             self.userList[users[i]].connection.send = function() {};
@@ -721,7 +721,7 @@ var GameServer = function() {
     self.contestResponder = []; // Array of players that don't contest the claim
     self.courtCoins = 0;
     self.doneWaiting = false;
-    self.enableTurnCheck = true;
+    self.enableTurnCheck = false;
     self.forceSwapCount = 0;
     self.inquired = -1; // ID of player that is being inquired
     self.keyLen = 1001; // Range X of authKeys where x = (max - min) + min
@@ -746,6 +746,9 @@ var GameServer = function() {
       //process.exit();
     });
     setTimeout(self.activityCheck, 300000);
+    setInterval(function() {
+      self.updateGC('update');
+    }, 60000);
   };
 
   self.processGameState = function() {
@@ -1041,7 +1044,7 @@ var GameServer = function() {
         if (self.state === GameServerState.WAITING_FOR_USERS) {
           var postData = JSON.stringify({ state: self.state, players: Object.keys(self.userList), host: self.lobbyHost });
         } else {
-          var postData = JSON.stringify({ state: self.state, players: self.playerList, playerCoins: self.playerCoins, courtCoins: self.courtCoins });
+          var postData = JSON.stringify({ state: self.state, players: self.playerList, host: self.lobbyHost, playerCoins: self.playerCoins, courtCoins: self.courtCoins });
         }
         var req = request({ hostname: 'localhost', port: '8000', path: '/update?id='+lobbyId+"&key="+lobbyKey, method: 'POST', headers: {'Content-Type':'application/json'} });
         req.on('error', function(err) {

@@ -42,6 +42,9 @@ Recv:
 13 - User left lobby
 	{"id": 13, "user": "fakeuser1"};
 
+14 - User is the host
+	{"id": 14}
+
 
 
 100 - Regenerated authentication key

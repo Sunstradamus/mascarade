@@ -2,7 +2,7 @@
 
 var Box = React.createClass({
   
-  DEBUG: false,
+  DEBUG: true,
   TIMER_LENGTH: 28, // client side, server will always be 30 seconds
   
   // store basically all state in Box, pass to children as props
