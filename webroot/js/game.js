@@ -273,6 +273,8 @@ var Box = React.createClass({
           break;
         case 104:
           // Game Over, one winner
+          $("#timer").css( 'display', 'none' );
+          $("#timerText").css( 'display', 'none');
           this.setState(function (prevState, currProps) {
             prevState.entries.push({ 'private': false, 'message': "Game Over! " + prevState.players[msg['winner']] + " wins!" });
             return { entries: prevState.entries, hasWinner: true };
@@ -280,6 +282,8 @@ var Box = React.createClass({
           break;
         case 105:
           // Game Over, multiple winners
+          $("#timer").css( 'display', 'none' );
+          $("#timerText").css( 'display', 'none');
           this.setState(function (prevState, currProps) {
             var winners = []
             for( var i = 0 ; i < msg['players'].length ; i++) {
@@ -922,6 +926,10 @@ var ActionArea = React.createClass({
         buttonsArea = React.createElement( ClaimArea, { sendClaim: this.sendClaim,
                                                         cancelClaim: (this.props.gameStateSpecial == this.SPECIAL_BEING_INQUIRED) ? null : this.cancelClaim,
                                                         gameCards: this.props.gameCards  });
+      }
+      
+      else if (this.props.gameStateSpecial == this.SPECIAL_DONT_CONTEST) {
+        buttonsArea = "";
       }
       
       else if (this.props.gameStateSpecial == this.SPECIAL_SWAP_NOT_READY) {
