@@ -141,6 +141,17 @@ switch (mode) {
                     console.log("Lobby ID "+url.query.id+" has ended with winners: "+winners);
                     delete lobbies[url.query.id];
                     res.end();
+                    var postData = "winners="+body;
+                    var hash = hmac('sha512', SECRET_KEY).update(postData).digest('hex');
+                    postData += "&signature="+hash;
+                    var postReq = http.request({ hostname: 'localhost', port: '80', path: '/winner.php', method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Content-Length': Buffer.byteLength(postData) } }, function(res) {
+                      // Do I care about the response?..
+                    }).on('error', function(err) {
+                      console.log(err);
+                    });
+                    postReq.write(postData);
+                    postReq.end();
+                    console.log("Sent server winner update, hash: "+hash+", body: "+body);
                   });
                 } else {
                   res.statusCode = 400;

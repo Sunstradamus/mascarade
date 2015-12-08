@@ -27,7 +27,6 @@ $("document").ready(function() {
       url: 'http://' + window.location.hostname + ':8001/lobbies',
       dataType: "json",
       success: function(lobbies) {
-        console.log(lobbies);
         for( lobby in lobbies ) {
           var status = (lobbies[lobby].state > 0) ? "Started" : "Waiting for players";
           var lobbyEl = $("<a href=\"" + (lobbies[lobby].state > 0 ? "#" : "game2.php?lobby=" + lobby + "&port=" + lobbies[lobby].port) + "\"><div class=\"lobby\" >" + "Lobby ID: " + lobby + "<br/>Status: " + status + (lobbies[lobby].host ? "<br/>Host: " + lobbies[lobby].host : "") + "</div></a>" );
@@ -35,11 +34,15 @@ $("document").ready(function() {
         }
       },
       error: function() {
-        document.getElementById("new-lobby").setAttribute("disabled", "true");
-        var alert = document.createElement('div');
-        alert.id = 'alert-disconnected';
-        alert.textContent = 'Connection to Game Coordinator Lost; Searching for Game Coordinator...';
-        document.body.appendChild(alert);
+        if (document.getElementById("new-lobby")) {
+          // TODO: Do something here like adjust the refresh rate
+        } else {
+          document.getElementById("new-lobby").setAttribute("disabled", "true");
+          var alert = document.createElement('div');
+          alert.id = 'alert-disconnected';
+          alert.textContent = 'Connection to Game Coordinator Lost; Searching for Game Coordinator...';
+          document.body.appendChild(alert);
+        }
       },
     });
   }
