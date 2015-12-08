@@ -194,6 +194,38 @@ var GameServer = function() {
                     con.send(JSON.stringify({ id: 103 }));
                   }
                   break;
+                case GameServerState.STARTED_REVEAL_SWAP:
+                  if (msg.hasOwnProperty('act') && msg.act === GameAction.SWAP_CARD && msg.hasOwnProperty('target') && msg.hasOwnProperty('fake') && (self.userList.hasOwnProperty(msg.target) || (msg.target === 0 && msg.target < self.centerCards.length) || (msg.target === 1 && msg.target < self.centerCards.length))) {
+                    clearTimeout(self.gameLoop);
+                    // You can't swap with yourself...
+                    if (msg.target == msg.username) {
+                      con.send(JSON.stringify({ id: 103 }));
+                    }
+                    if (msg.fake) {
+                      // Fake swap
+                    } else {
+                      // Real swap
+                      if (msg.target === 0 || msg.target === 1) {
+                        var temp;
+                        temp = self.userList[msg.username].card;
+                        self.userList[msg.username].card = self.centerCards[msg.target];
+                        self.centerCards[msg.target] = temp;
+                      } else {
+                        var temp;
+                        temp = self.userList[msg.username].card;
+                        self.userList[msg.username].card = self.userList[msg.target].card;
+                        self.userList[msg.target].card = temp;
+                      }
+                    }
+                    self.broadcast(JSON.stringify({ id: 200, target: msg.target }));
+                    self.state = GameServerState.STARTED_NORMAL;
+                    self.gameLoop = setTimeout(self.processGameState, 30000);
+                    self.processGameState();
+                  } else {
+                    // Bad packet
+                    con.send(JSON.stringify({ id: 103 }));
+                  }
+                  break;
                 case GameServerState.STARTED_NORMAL:
                   if (msg.hasOwnProperty('act')) {
                     switch(msg.act) {
@@ -605,6 +637,7 @@ var GameServer = function() {
         cards = self.shuffle(cards);
         for (var i = self.playerList.length - 1; i >= 0; i--) {
           self.userList[self.playerList[i]].card = cards[i];
+          self.userList[self.playerList[i]].revealed = -1;
         };
         self.centerCards = [cards[4], cards[5]];
         self.playerCards = cards;
@@ -614,6 +647,7 @@ var GameServer = function() {
         cards = self.shuffle(cards);
         for (var i = self.playerList.length - 1; i >= 0; i--) {
           self.userList[self.playerList[i]].card = cards[i];
+          self.userList[self.playerList[i]].revealed = -1;
         };
         self.centerCards = [cards[5]];
         self.playerCards = cards;
@@ -624,6 +658,7 @@ var GameServer = function() {
         for (var i = self.playerList.length - 1; i >= 0; i--) {
           self.userList[self.playerList[i]].card = cards[i];
           self.playerCards[i] = cards[i];
+          self.userList[self.playerList[i]].revealed = -1;
         };
         self.centerCards = [];
         return;
@@ -633,6 +668,7 @@ var GameServer = function() {
         for (var i = self.playerList.length - 1; i >= 0; i--) {
           self.userList[self.playerList[i]].card = cards[i];
           self.playerCards[i] = cards[i];
+          self.userList[self.playerList[i]].revealed = -1;
         };
         self.centerCards = [];
         return;
@@ -642,6 +678,7 @@ var GameServer = function() {
         for (var i = self.playerList.length - 1; i >= 0; i--) {
           self.userList[self.playerList[i]].card = cards[i];
           self.playerCards[i] = cards[i];
+          self.userList[self.playerList[i]].revealed = -1;
         };
         self.centerCards = [];
         return;
@@ -651,6 +688,7 @@ var GameServer = function() {
         for (var i = self.playerList.length - 1; i >= 0; i--) {
           self.userList[self.playerList[i]].card = cards[i];
           self.playerCards[i] = cards[i];
+          self.userList[self.playerList[i]].revealed = -1;
         };
         self.centerCards = [];
         return;
@@ -660,6 +698,7 @@ var GameServer = function() {
         for (var i = self.playerList.length - 1; i >= 0; i--) {
           self.userList[self.playerList[i]].card = cards[i];
           self.playerCards[i] = cards[i];
+          self.userList[self.playerList[i]].revealed = -1;
         };
         self.centerCards = [];
         return;
@@ -669,6 +708,7 @@ var GameServer = function() {
         for (var i = self.playerList.length - 1; i >= 0; i--) {
           self.userList[self.playerList[i]].card = cards[i];
           self.playerCards[i] = cards[i];
+          self.userList[self.playerList[i]].revealed = -1;
         };
         self.centerCards = [];
         return;
@@ -678,6 +718,7 @@ var GameServer = function() {
         for (var i = self.playerList.length - 1; i >= 0; i--) {
           self.userList[self.playerList[i]].card = cards[i];
           self.playerCards[i] = cards[i];
+          self.userList[self.playerList[i]].revealed = -1;
         };
         self.centerCards = [];
         return;
@@ -687,6 +728,7 @@ var GameServer = function() {
         for (var i = self.playerList.length - 1; i >= 0; i--) {
           self.userList[self.playerList[i]].card = cards[i];
           self.playerCards[i] = cards[i];
+          self.userList[self.playerList[i]].revealed = -1;
         };
         self.centerCards = [];
         return;
@@ -731,6 +773,7 @@ var GameServer = function() {
     self.maxChatLen = 256;
     self.playerCards = []; // This exists only as a reference to check what cards are in the game, it is NOT updated for swaps, etc.
     self.playerCoins = []; // Updated array where index = player ID of all players' coin count
+    self.resolveReveal = false; // Flag to check if the player has resolved his force swap upon reveal
     self.secondPeasant = -1;
     self.spyTarget = ''; // Username of the target of the spy card
     self.state = GameServerState.WAITING_FOR_USERS;
@@ -761,13 +804,26 @@ var GameServer = function() {
         self.broadcast(JSON.stringify({ state: self.state, players: self.playerList, playerCoins: self.playerCoins, courtCoins: self.courtCoins, turn: self.turn }));
         self.userList[self.playerList[self.turn]].connection.send(JSON.stringify({ id: 5, actions: GameAction.SWAP_CARD }));
         break;
-      case GameServerState.STARTED_NORMAL:
-        self.advanceTurn();
-        if (self.userList[self.playerList[self.turn]].hasOwnProperty('revealed') && (self.userList[self.playerList[self.turn]].revealed - 1) === self.turn) {
-          // Player was revealed last turn, force swap.
-          self.state = GameServerState.STARTED_FORCE_SWAP;
+      case GameServerState.STARTED_REVEAL_SWAP:
+        if (self.resolveReveal === false) {
+          self.resolveReveal = true;
           self.broadcast(JSON.stringify({ state: self.state, players: self.playerList, playerCoins: self.playerCoins, courtCoins: self.courtCoins, turn: self.turn }));
           self.userList[self.playerList[self.turn]].connection.send(JSON.stringify({ id: 5, actions: GameAction.SWAP_CARD }));
+        } else if (self.resolveReveal === true) {
+          self.resolveReveal = false;
+          self.state = GameServerState.STARTED_NORMAL;
+          clearTimeout(self.gameLoop);
+          setImmediate(self.processGameState);
+        }
+        break;
+      case GameServerState.STARTED_NORMAL:
+        self.advanceTurn();
+        if (self.userList[self.playerList[self.turn]].revealed != -1 && (self.userList[self.playerList[self.turn]].revealed - 1) === self.turn) {
+          // Player was revealed last turn, force swap.
+          self.state = GameServerState.STARTED_REVEAL_SWAP;
+          self.userList[self.playerList[self.turn]].revealed = -1;
+          clearTimeout(self.gameLoop);
+          setImmediate(self.processGameState);
         } else {
           self.broadcast(JSON.stringify({ state: self.state, players: self.playerList, playerCoins: self.playerCoins, courtCoins: self.courtCoins, turn: self.turn }));
           self.userList[self.playerList[self.turn]].connection.send(JSON.stringify({ id: 5, actions: GameAction.SWAP_CARD | GameAction.VIEW_OWN_CARD | GameAction.CLAIM_CHARACTER }));
