@@ -789,7 +789,7 @@ var GameServer = function() {
           cards[self.turn] = self.claimedCharacter;
           while (self.contester.length > 0) {
             var player = self.contester.pop();
-            var playerIndex = self.playerList.indexOf(user);
+            var playerIndex = self.playerList.indexOf(player);
             self.playerCoins[playerIndex] -= 1;
             self.courtCoins += 1;
             cards[playerIndex] = self.userList[player].card;
