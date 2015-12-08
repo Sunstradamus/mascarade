@@ -7,6 +7,7 @@ exports.GameServerState = Object.freeze({
   STARTED_PROCESS_CLAIM: 5,
   STARTED_PROCESS_STAGE_2: 6,
   STARTED_PROCESS_STAGE_3: 7,
+  STARTED_REVEAL_SWAP: 8,
 });
 
 exports.GameCard = Object.freeze({
