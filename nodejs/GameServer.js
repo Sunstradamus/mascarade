@@ -184,7 +184,7 @@ var GameServer = function() {
                     }
                     self.broadcast(JSON.stringify({ id: 200, target: msg.target }));
                     self.forceSwapCount += 1;
-                    if (self.forceSwapCount === 4) {
+                    if (self.forceSwapCount >= 4) {
                       self.state = GameServerState.STARTED_NORMAL;
                     }
                     self.gameLoop = setTimeout(self.processGameState, 30000);
@@ -763,8 +763,15 @@ var GameServer = function() {
         break;
       case GameServerState.STARTED_NORMAL:
         self.advanceTurn();
-        self.broadcast(JSON.stringify({ state: self.state, players: self.playerList, playerCoins: self.playerCoins, courtCoins: self.courtCoins, turn: self.turn }));
-        self.userList[self.playerList[self.turn]].connection.send(JSON.stringify({ id: 5, actions: GameAction.SWAP_CARD | GameAction.VIEW_OWN_CARD | GameAction.CLAIM_CHARACTER }));
+        if (self.userList[self.playerList[self.turn]].hasOwnProperty('revealed') && (self.userList[self.playerList[self.turn]].revealed - 1) === self.turn) {
+          // Player was revealed last turn, force swap.
+          self.state = GameServerState.STARTED_FORCE_SWAP;
+          self.broadcast(JSON.stringify({ state: self.state, players: self.playerList, playerCoins: self.playerCoins, courtCoins: self.courtCoins, turn: self.turn }));
+          self.userList[self.playerList[self.turn]].connection.send(JSON.stringify({ id: 5, actions: GameAction.SWAP_CARD }));
+        } else {
+          self.broadcast(JSON.stringify({ state: self.state, players: self.playerList, playerCoins: self.playerCoins, courtCoins: self.courtCoins, turn: self.turn }));
+          self.userList[self.playerList[self.turn]].connection.send(JSON.stringify({ id: 5, actions: GameAction.SWAP_CARD | GameAction.VIEW_OWN_CARD | GameAction.CLAIM_CHARACTER }));
+        }
         break;
       case GameServerState.STARTED_CLAIM_CHARACTER:
         if (self.doneWaiting) {
@@ -790,14 +797,17 @@ var GameServer = function() {
         if (self.userList[self.playerList[self.turn]].card === self.claimedCharacter) {
           self.characterOwner = self.turn;
           cards[self.turn] = self.claimedCharacter;
+          self.userList[self.playerList[self.turn]].revealed = self.turn;
           while (self.contester.length > 0) {
             var player = self.contester.pop();
             var playerIndex = self.playerList.indexOf(player);
-            self.playerCoins[playerIndex] -= 1;
-            self.courtCoins += 1;
             cards[playerIndex] = self.userList[player].card;
+            self.userList[player].revealed = self.turn;
             if (self.userList[player].card === GameCard.PEASANT) {
               self.secondPeasant = playerIndex;
+            } else {
+              self.playerCoins[playerIndex] -= 1;
+              self.courtCoins += 1;
             }
           }
           self.broadcast(JSON.stringify({ state: self.state, players: self.playerList, playerCoins: self.playerCoins, courtCoins: self.courtCoins, revealedCards: cards, turn: self.turn }));
@@ -807,6 +817,7 @@ var GameServer = function() {
         } else {
           self.characterOwner = -1;
           cards[self.turn] = self.userList[self.playerList[self.turn]].card;
+          self.userList[self.playerList[self.turn]].revealed = self.turn;
           self.playerCoins[self.turn] -= 1;
           self.courtCoins += 1;
           var foundFirstPeasant = false;
@@ -814,6 +825,7 @@ var GameServer = function() {
             var player = self.contester.pop();
             var playerIndex = self.playerList.indexOf(player);
             cards[playerIndex] = self.userList[player].card;
+            self.userList[player].revealed = self.turn;
             if (self.userList[player].card === self.claimedCharacter) {
               if (foundFirstPeasant) {
                 self.secondPeasant = playerIndex;
