@@ -31,6 +31,7 @@ authenticate_user();
         </div>
         <a class='btn btn-primary' id="logout" href="logout.php">Logout</a>
         <a class='btn btn-primary' id="new-lobby" href="#">Create Game Lobby</a>
+        <a class='btn btn-info' id="game-rules" href="/gameRules.html">How To Play</a>
       </div>
     </div>
 

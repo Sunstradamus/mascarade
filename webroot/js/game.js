@@ -14,26 +14,27 @@ var Box = React.createClass({
   // ----------------------------------------------------------- getInitialState
   getInitialState: function getInitialState() {
     return {
-      turn: -1,
-      token: this.props.token,
-      players: [],
-      playerCards: [],
-      playerCoins:[],
-      entries: [],
-      gameState: 0,
-      myTurn: false,
-      needTarget: false,
-      middle: [],
-      actions: 0,
-      gameCards: [],
-      gameStateSpecial: 0,
-      myCard: -1,
-      revealedCards: {},
-      needMultiTarget: false,
-      multiTarget: [],
-      preservedTarget: {},
-      courtCoins: 0,
-      firstTurnFlag: true
+      turn: -1,                  // index of player who's turn it is
+      token: this.props.token,   // for authenticating
+      players: [],               // player names
+      playerCards: [],           // variable list of which cards players are known to have
+      playerCoins:[],            // number of coins each player has
+      entries: [],               // log entries
+      myTurn: false,             // flag indicating this user's turn
+      needTarget: false,         // flag indicating user should select from cards on field
+      middle: [],                // array to store non-human cards
+      actions: 0,                // possible actions user can take
+      gameCards: [],             // static list of cards in the game
+      gameState: 0,              // server-side identifiers
+      gameStateSpecial: 0,       // client side identifiers to set up the action area properly
+      myCard: -1,                // card that the user currently has
+      revealedCards: {},         // cards that were revealed during a contest (not used I think)
+      needMultiTarget: false,    // user needs to select two targets from playing field (used for fool)
+      multiTarget: [],           // the cards that the user selected
+      preservedTarget: {},       // used to store the last card the user picked (used for spy)
+      courtCoins: 0,             // coins in the courthouse
+      firstTurnFlag: true,       // special flag to tell react not to hide which cards people have before the game starts
+      timerInterval: null        // interval javascript variable for the timer
     };
   },
 
@@ -74,7 +75,7 @@ var Box = React.createClass({
 
   onClose: function onClose(e) {
     console.log("websocket closed");
-    window.location.href = '/';
+    // window.location.href = '/';
   },
 
   onError: function onError(e) {
@@ -82,16 +83,23 @@ var Box = React.createClass({
   },
 
   onMessage: function onMessage(e) {
-    console.log(e.data);
     var msg = JSON.parse(e.data);
     
-       
-    
     if(!msg.hasOwnProperty('id')) {
+      
+      if( (msg.hasOwnProperty('state') && msg['state'] != this.state.gameState) ||
+           msg.hasOwnProperty('turn') && msg['turn'] != this.state.turn ) {
+        
+             if (this.state.timerInterval != null) {
+               clearInterval(this.state.timerInterval);
+             }
+             this.setState({ timerInterval: startTimer(25) });
+      }
       
       var cards = [];
       if( msg.hasOwnProperty('revealedCards')) {
         cards = msg['revealedCards'];
+        this.setState({ firstTurnFlag: true });
       } 
       else if( msg.hasOwnProperty('playerCards')) {
         cards = msg['playerCards'];
@@ -105,17 +113,21 @@ var Box = React.createClass({
       if( msg.hasOwnProperty('turn') && msg['turn'] != this.state.turn ) {
         
         this.setState(function (prevState, currProps) {
+          var myTurn;
           if ( this.state.players[msg['turn']] != this.props.username ) {
             prevState.entries.push({ 'private': false, 'message': "It's " + prevState.players[msg['turn']] + "'s turn!"});
+            myTurn = false;
           }
           else {
             prevState.entries.push({ 'private': false, 'message': "It's your turn!"});
+            myTurn = true
           }
           
           // current turn changed; remove potentially lying around intermediate states
           
           return { entries: prevState.entries,
                    myCard: -1,
+                   myTurn: myTurn,
                    needTarget: false,
                    needMultiTarget: false,
                    gameStateSpecial: 0,
@@ -157,6 +169,14 @@ var Box = React.createClass({
         case 2:
           // Authentication approved
           this.setState({ auth: msg['auth'] });
+          if( msg.hasOwnProperty('users') && msg.users.length > 0) {
+            this.setState(function (prevState, currProps) {
+              for( var i = 0 ; i < msg['users'].length ; i++ ) {
+                prevState.entries.push({ 'private': false, 'message': msg['users'][i] + " has connected to the game lobby." });
+              }
+            return { entries: prevState.entries };
+          }); 
+          }
           break;
         case 5:
           // Turn notification & actions permitted
@@ -270,7 +290,7 @@ var Box = React.createClass({
           this.setState(function (prevState, currProps) {
             if( prevState.players[prevState.turn] == currProps.username ) {
               prevState.entries.push({ 'private': false, 'message': "You have claimed " + CHARACTERS[msg['claimed']] + "! Please wait while other players decide whether to contest." });
-              return { entries: prevState.entries };
+              return { entries: prevState.entries, gameStateSpecial: 996 };
             }
             else {
               prevState.entries.push({ 'private': false, 'message': prevState.players[prevState.turn] + " is claiming " + CHARACTERS[msg['claimed']] });
@@ -382,7 +402,6 @@ var Box = React.createClass({
     }
     
     $.extend(messageToSend, message);
-    console.log(messageToSend);
     this.state.websocket.send(JSON.stringify( messageToSend ));
     this.setState({ preservedTarget: {}, gameStateSpecial: 0 });    
   },
@@ -395,7 +414,6 @@ var Box = React.createClass({
     var id = this.state.targetMessage.hasOwnProperty('act') ? 5 : 7 // no act means it's a character
     $.extend( target, this.state.targetMessage );
     $.extend( target, this.buildMessage(id) );
-    console.log(target);
     this.state.websocket.send(JSON.stringify( target )); 
     this.setState({ targetMessage: {}, needTarget: false });
   },
@@ -663,10 +681,10 @@ var CardArea = React.createClass({
           thisCard = this.props.preservedTarget['card'];
         }
         else {
-          thisCard = this.props.middle[j];
+          thisCard = this.props.playerCards[j + this.props.players.length];
         }
         botCards.push({ name: "middlecard" + j.toString(),
-                        coins: 0,
+                        coins: -1,
                         card: thisCard,
                         index: j,
                         selected: (this.props.multiTarget.indexOf( j ) > -1) });
@@ -740,7 +758,7 @@ var CardRow = React.createClass({
         React.createElement(
           'span',
           { className: 'gold' },
-          'Gold: ' + this.props.cards[i].coins
+          (this.props.cards[i].coins >= 0 ? ('Gold: ' + this.props.cards[i].coins) : "")
         )
       ));
     }
@@ -764,6 +782,7 @@ var ActionArea = React.createClass({
   SPECIAL_SWAP: 999, // not a server side game state, start from 999 work down
   SPECIAL_BEING_INQUIRED: 998,
   SPECIAL_SWAP_NOT_READY: 997,
+  SPECIAL_DONT_CONTEST: 996,
   
   GameCard: [ 
     'judge',
@@ -848,80 +867,103 @@ var ActionArea = React.createClass({
   },
   
   render: function render() {
-    
-
-    
     var cardFile = (this.props.myCard != null) ? this.GameCard[this.props.myCard] : "cardBack";
     var buttonsArea;
     
-    if (this.state.pickingClaim || this.props.gameStateSpecial == this.SPECIAL_BEING_INQUIRED ) {
-      buttonsArea = React.createElement( ClaimArea, { sendClaim: this.sendClaim,
-                                                      cancelClaim: (this.props.gameStateSpecial == this.SPECIAL_BEING_INQUIRED) ? null : this.cancelClaim,
-                                                      gameCards: this.props.gameCards  });
-    }
-    
-    else if (this.props.gameStateSpecial == this.SPECIAL_SWAP_NOT_READY) {
+    if (this.props.gameState < 3 && !this.props.myTurn && this.props.gameStateSpecial == 0) {
+      
+      // hack to hide timer when it's not your turn or you don't have any actions to make
+      $("#timer").css( 'display', 'none' );
+      $("#timerText").css( 'display', 'none');
+      
       buttonsArea = React.createElement(
                       'div',
                       { className: 'col-sm-8 buttons-area' },
                       React.createElement('img', { className: "col-sm-6 action-button",
-                                                   src: "images/zipboys/swapPress.png",
-                                                   onClick: null }),
+                                                   src: "images/zipboys/checkPress.png" }),
                       React.createElement('img', { className: "col-sm-6 action-button",
-                                                   src: "images/zipboys/fakePress.png",
-                                                   onClick: null })
-                      );
-    }      
-    
-    else if (this.props.gameStateSpecial == this.SPECIAL_SWAP) {
-      buttonsArea = React.createElement(
-                      'div',
-                      { className: 'col-sm-8 buttons-area' },
-                      React.createElement('img', { className: "col-sm-6 action-button available",
-                                                   src: "images/zipboys/swap.png",
-                                                   onClick: this.swap }),
-                      React.createElement('img', { className: "col-sm-6 action-button available",
-                                                   src: "images/zipboys/fake.png",
-                                                   onClick: this.fake })
-                      );
-    }  
-    
-    else if (this.props.gameState == this.CHOOSE_CONTEST ) {
-      buttonsArea = React.createElement(
-                      'div',
-                      { className: 'col-sm-8 buttons-area' },
+                                                   src: "images/zipboys/swapPress.png" }),
                       React.createElement('img', { className: "col-sm-6 action-button",
-                                                   src: "images/zipboys/contest.png",
-                                                   onClick: this.contest.bind(this, 1) }),
+                                                   src: "images/zipboys/claimPress.png" }),
                       React.createElement('img', { className: "col-sm-6 action-button",
-                                                   src: "images/zipboys/nocontest.png",
-                                                   onClick: this.contest.bind(this, 0) })
-                      );
+                                                   src: "images/zipboys/fakePress.png" })
+      );
     }
     
     else {
       
-      var canClaim = ( this.props.myTurn && ((this.CLAIM_CHARACTER & this.props.actions ) != 0));
-      var canCheck = ( this.props.myTurn && ((this.VIEW_OWN_CARD & this.props.actions ) != 0));
-      var canSwap = this.props.myTurn;
+      $("#timer").css( 'display', 'initial' );
+      $("#timerText").css( 'display', 'initial' );
       
-      buttonsArea = React.createElement(
-                      'div',
-                      { className: 'col-sm-8 buttons-area' },
-                      React.createElement('img', { className: "col-sm-6 action-button" + (canCheck ? " available" : ""),
-                                                   src: "images/zipboys/check" + (canCheck ? "" : "Press") + ".png",
-                                                   onClick: this.check }),
-                      React.createElement('img', { className: "col-sm-6 action-button" + (canSwap ? " available" : ""),
-                                                   src: "images/zipboys/swap" + (canSwap ? "" : "Press") + ".png",
-                                                   onClick: this.swap }),
-                      React.createElement('img', { className: "col-sm-6 action-button" + (canClaim ? " available" : ""), 
-                                                   src: "images/zipboys/claim" + (canClaim ? "" : "Press") + ".png",
-                                                   onClick: this.claim }),
-                      React.createElement('img', { className: "col-sm-6 action-button" + (canSwap ? " available" : ""),
-                                                   src: "images/zipboys/fake" + (canSwap ? "" : "Press") + ".png",
-                                                   onClick: this.fake }),
-                      React.createElement('span', { id: 'timer' })
-      );
+    
+      if (this.state.pickingClaim || this.props.gameStateSpecial == this.SPECIAL_BEING_INQUIRED ) {
+        buttonsArea = React.createElement( ClaimArea, { sendClaim: this.sendClaim,
+                                                        cancelClaim: (this.props.gameStateSpecial == this.SPECIAL_BEING_INQUIRED) ? null : this.cancelClaim,
+                                                        gameCards: this.props.gameCards  });
+      }
+      
+      else if (this.props.gameStateSpecial == this.SPECIAL_SWAP_NOT_READY) {
+        buttonsArea = React.createElement(
+                        'div',
+                        { className: 'col-sm-8 buttons-area' },
+                        React.createElement('img', { className: "col-sm-6 action-button",
+                                                     src: "images/zipboys/swapPress.png",
+                                                     onClick: null }),
+                        React.createElement('img', { className: "col-sm-6 action-button",
+                                                     src: "images/zipboys/fakePress.png",
+                                                     onClick: null })
+                        );
+      }      
+      
+      else if (this.props.gameStateSpecial == this.SPECIAL_SWAP) {
+        buttonsArea = React.createElement(
+                        'div',
+                        { className: 'col-sm-8 buttons-area' },
+                        React.createElement('img', { className: "col-sm-6 action-button available",
+                                                     src: "images/zipboys/swap.png",
+                                                     onClick: this.swap }),
+                        React.createElement('img', { className: "col-sm-6 action-button available",
+                                                     src: "images/zipboys/fake.png",
+                                                     onClick: this.fake })
+                        );
+      }  
+      
+      else if (this.props.gameState == this.CHOOSE_CONTEST && this.props.gameStateSpecial != this.SPECIAL_DONT_CONTEST ) {
+        buttonsArea = React.createElement(
+                        'div',
+                        { className: 'col-sm-8 buttons-area' },
+                        React.createElement('img', { className: "col-sm-6 action-button",
+                                                     src: "images/zipboys/contest.png",
+                                                     onClick: this.contest.bind(this, 1) }),
+                        React.createElement('img', { className: "col-sm-6 action-button",
+                                                     src: "images/zipboys/nocontest.png",
+                                                     onClick: this.contest.bind(this, 0) })
+                        );
+      }
+      
+      else {
+        
+        var canClaim = ( this.props.myTurn && ((this.CLAIM_CHARACTER & this.props.actions ) != 0));
+        var canCheck = ( this.props.myTurn && ((this.VIEW_OWN_CARD & this.props.actions ) != 0));
+        var canSwap = this.props.myTurn;
+        
+        buttonsArea = React.createElement(
+                        'div',
+                        { className: 'col-sm-8 buttons-area' },
+                        React.createElement('img', { className: "col-sm-6 action-button" + (canCheck ? " available" : ""),
+                                                     src: "images/zipboys/check" + (canCheck ? "" : "Press") + ".png",
+                                                     onClick: this.check }),
+                        React.createElement('img', { className: "col-sm-6 action-button" + (canSwap ? " available" : ""),
+                                                     src: "images/zipboys/swap" + (canSwap ? "" : "Press") + ".png",
+                                                     onClick: this.swap }),
+                        React.createElement('img', { className: "col-sm-6 action-button" + (canClaim ? " available" : ""), 
+                                                     src: "images/zipboys/claim" + (canClaim ? "" : "Press") + ".png",
+                                                     onClick: this.claim }),
+                        React.createElement('img', { className: "col-sm-6 action-button" + (canSwap ? " available" : ""),
+                                                     src: "images/zipboys/fake" + (canSwap ? "" : "Press") + ".png",
+                                                     onClick: this.fake })
+        );
+      }
     }
     
     return React.createElement(
@@ -947,7 +989,17 @@ var ActionArea = React.createClass({
           this.props.myCoins
         )
       ),
-      buttonsArea
+      buttonsArea,
+      React.createElement(
+        'span',
+        { id: 'timer' },
+        '25'
+      ),
+      React.createElement(
+        'span',
+        { id: 'timerText' },
+        'seconds left!'
+      )
     );
   }
 });
@@ -1063,21 +1115,24 @@ function findMyCard( players, cards, me ) {
 }
 
 function startTimer(duration) {
-    var display = $("timer");
+  console.log("30s timer starting now!");
+    var display = $("#timer");
+    $("#timerText").text = " seconds left!";
     var timer = duration, minutes, seconds;
-    setInterval(function () {
+    var interval = setInterval(function () {
         minutes = parseInt(timer / 60, 10);
         seconds = parseInt(timer % 60, 10);
 
         minutes = minutes < 10 ? "0" + minutes : minutes;
         seconds = seconds < 10 ? "0" + seconds : seconds;
 
-        display.text(minutes + ":" + seconds);
+        display.text( seconds );
 
         if (--timer < 0) {
-            timer = duration;
+            timer = 0;
         }
     }, 1000);
+    return interval;
 }
 
 

@@ -135,3 +135,17 @@
 #logo {
   display: block;
 }
+
+.card-explain {
+  padding-bottom: 1em;
+  max-height: 150px;
+  width: auto
+}
+
+.rules-box {
+  padding: 20px;
+  color: #fc0;
+  border: 5px solid #ffcc00;
+  background: #4c0099;
+  background: rgba(76, 0, 153, 0.4);
+}

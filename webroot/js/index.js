@@ -9,7 +9,7 @@ $("#new-lobby").click(function(e) {
       url: 'http://' + window.location.hostname + ':8001/new_lobby',
       dataType: "json",
       success: function(lobby) {
-        var lobbyEl = $("<a class=\"lobby\" href=\"game2.php?lobby=" + lobby.id + "&port=" + lobby.port + "\">" + lobby.id + "</a>" );
+        var lobbyEl = $("<a class=\"lobby\" href=\"game2.php?lobby=" + lobby.id + "&port=" + lobby.port + "\">" + "Lobby id: " + lobby.id + "</a>" );
         $('.lobbies').append(lobbyEl);
       },
     });
@@ -27,7 +27,7 @@ $("document").ready(function() {
       dataType: "json",
       success: function(lobbies) {
         for( lobby in lobbies ) {
-          var lobbyEl = $("<a class=\"lobby\" href=\"game2.php?lobby=" + lobby + "&port=" + lobbies[lobby]['port'].toString() + "\">" + lobby + "</a>" );
+          var lobbyEl = $("<a class=\"lobby\" href=\"game2.php?lobby=" + lobby + "&port=" + lobbies[lobby]['port'].toString() + "\">"+ "Lobby id: " + lobby + "</a>" );
           $('.lobbies').append(lobbyEl);
         }
       },
