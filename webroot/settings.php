@@ -4,7 +4,7 @@ authenticate_user();
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 	if (isset($_POST['old_password'], $_POST['new_password'], $_POST['verification'])) {
 		if ($_POST['new_password'] === $_POST['verification']) {
-	      if (mb_strlen($_POST['password']) > 5) {
+	      if (mb_strlen($_POST['new_password']) > 5) {
 		    $mysqli = new mysqli(MYSQL_HOST, MYSQL_USER, MYSQL_PASS, MYSQL_DTBS);
 		    if ($mysqli->connect_error) {
 		      throw new Exception('MySQL Error: '.$mysqli->connect_error);
@@ -75,15 +75,20 @@ if (isset($error_msg)):
 ?>
           <div class="alert alert-danger" role="alert"><?PHP html($error_msg); ?></div>
 <?PHP
+elseif (isset($success_msg)):
+?>
+          <div class="alert alert-success" role="alert"><?PHP html($success_msg); ?></div>
+<?PHP
 endif;
 ?>
           <label for="inputUsername" class="sr-only">Old Password</label>
-          <input type="text" id="inputUsername" name="old_password" class="form-control" placeholder="Old Password" required autofocus>
+          <input type="password" id="inputUsername" name="old_password" class="form-control" placeholder="Old Password" required autofocus>
           <label for="inputPassword" class="sr-only">New Password</label>
           <input type="password" id="inputPassword" name="new_password" class="form-control" placeholder="New Password" required>
           <label for="inputPassword" class="sr-only">Confirm Password</label>
           <input type="password" id="inputVerification" name="verification" class="form-control" placeholder="Confirm Password" required>
           <button class="btn btn-lg btn-primary btn-block" type="submit">Change</button>
+          <a class="btn btn-lg btn-info btn-block" href="/">Back</a>
         </form>
       </div>
     </div>
