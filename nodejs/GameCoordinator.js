@@ -136,22 +136,30 @@ switch (mode) {
                     var post = JSON.parse(body);
                     var winners = "";
                     for (var i = post.length - 1; i >= 0; i--) {
-                      winners += post[i] + ", "
+                      winners += post[i] + ", ";
                     };
                     console.log("Lobby ID "+url.query.id+" has ended with winners: "+winners);
                     delete lobbies[url.query.id];
                     res.end();
+                    /* Last minute attempt to send winners to the PHP server for processing, but I couldn't get the post to work...
                     var postData = "winners="+body;
                     var hash = hmac('sha512', SECRET_KEY).update(postData).digest('hex');
                     postData += "&signature="+hash;
                     var postReq = http.request({ hostname: 'localhost', port: '80', path: '/winner.php', method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Content-Length': Buffer.byteLength(postData) } }, function(res) {
                       // Do I care about the response?..
+                      var body = '';
+                      res.on('data', function(data) {
+                        body += data;
+                      });
+                      res.on('end', function() {
+                        console.log("Server response: "+body);
+                      });
                     }).on('error', function(err) {
                       console.log(err);
                     });
                     postReq.write(postData);
                     postReq.end();
-                    console.log("Sent server winner update, hash: "+hash+", body: "+body);
+                    console.log("Sent server winner update, hash: "+hash+", body: "+body);*/
                   });
                 } else {
                   res.statusCode = 400;

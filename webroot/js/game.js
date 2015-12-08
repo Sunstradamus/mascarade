@@ -2,7 +2,7 @@
 
 var Box = React.createClass({
   
-  DEBUG: false,  // change to enable the start with 12 fake users and a custom server message bar
+  DEBUG: true,  // change to enable the start with 12 fake users and a custom server message bar
   TIMER_LENGTH: 28, // client side, server will always be 30 seconds
   
   // store basically all state in Box, pass to children as props
