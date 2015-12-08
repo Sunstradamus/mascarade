@@ -5,7 +5,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 	if (isset($_POST['old_password'], $_POST['new_password'], $_POST['verification'])) {
 		if ($_POST['new_password'] === $_POST['verification']) {
 	      if (mb_strlen($_POST['password']) > 5) {
+		    $mysqli = new mysqli(MYSQL_HOST, MYSQL_USER, MYSQL_PASS, MYSQL_DTBS);
+		    if ($mysqli->connect_error) {
+		      throw new Exception('MySQL Error: '.$mysqli->connect_error);
+		    }
 
+		    $username = $_SESSION['user']['username'];
+            $stmt = $mysqli->prepare("SELECT `password` FROM `users` WHERE `username`=?");
+            $stmt->bind_param("s", $username);
+            $stmt->execute();
+            $stmt->bind_result($password);
+            if ($stmt->fetch() === TRUE) {
+	            $stmt->close();
+
+            	if (password_verify($_POST['old_password'], $password)) {
+            		$new_password = password_hash($_POST['new_password'], PASSWORD_BCRYPT);
+            		$username = $_SESSION['user']['username'];
+
+            		$stmt = $mysqli->prepare("UPDATE `users` SET `password`=? WHERE `username`=?");
+		            $stmt->bind_param("ss", $new_password, $username);
+		            if ($stmt->execute()) {
+		            	$success_msg = 'Password changed!';
+		            } else {
+		            	$error_msg = 'Unknown error occured';
+		            }
+            	} else {
+            		$error_msg = 'Wrong old password';
+            	}
+            } else {
+              	$stmt->close();
+            	$error_msg = 'Fetch error occured';
+            }
 	      } else {
 	        $error_msg = 'Password too short';
 	      }

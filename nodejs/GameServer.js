@@ -219,6 +219,8 @@ var GameServer = function() {
                     }
                     self.broadcast(JSON.stringify({ id: 200, target: msg.target }));
                     self.state = GameServerState.STARTED_NORMAL;
+                    self.userList[msg.username].revealed = -1;
+                    self.resolveReveal = false;
                     self.gameLoop = setTimeout(self.processGameState, 30000);
                     self.processGameState();
                   } else {
