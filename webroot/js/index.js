@@ -9,7 +9,8 @@ $("#new-lobby").click(function(e) {
       url: 'http://' + window.location.hostname + ':8001/new_lobby',
       dataType: "json",
       success: function(lobby) {
-        var lobbyEl = $("<a class=\"lobby\" href=\"game2.php?lobby=" + lobby.id + "&port=" + lobby.port + "\">" + "Lobby id: " + lobby.id + "</a>" );
+        var status = (lobby.state > 0) ? "Started" : "Waiting for players";
+        var lobbyEl = $("<a href=\"game2.php?lobby=" + lobby.id + "&port=" + lobby.port + "\"><div class=\"lobby\" >" + "Lobby ID: " + lobby.id + "<br/>Status: " + status + (lobby.host ? "<br/>Host: " + lobby.host : "") + "</div></a>" );
         $('.lobbies').append(lobbyEl);
       },
     });
@@ -26,8 +27,10 @@ $("document").ready(function() {
       url: 'http://' + window.location.hostname + ':8001/lobbies',
       dataType: "json",
       success: function(lobbies) {
+        console.log(lobbies);
         for( lobby in lobbies ) {
-          var lobbyEl = $("<a class=\"lobby\" href=\"game2.php?lobby=" + lobby + "&port=" + lobbies[lobby]['port'].toString() + "\">"+ "Lobby id: " + lobby + "</a>" );
+          var status = (lobbies[lobby].state > 0) ? "Started" : "Waiting for players";
+          var lobbyEl = $("<a href=\"" + (lobbies[lobby].state > 0 ? "#" : "game2.php?lobby=" + lobby + "&port=" + lobbies[lobby].port) + "\"><div class=\"lobby\" >" + "Lobby ID: " + lobby + "<br/>Status: " + status + (lobbies[lobby].host ? "<br/>Host: " + lobbies[lobby].host : "") + "</div></a>" );
           $('.lobbies').append(lobbyEl);
         }
       },

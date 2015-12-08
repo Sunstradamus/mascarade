@@ -1,4 +1,5 @@
 .card-area {
+  padding: 2em 1em;
   height: 60%;
   border: 5px solid #ffcc00;
   border-bottom: 2px solid #ffcc00;
@@ -120,14 +121,14 @@
 }
 
 .need-target {
-  background: #fff;
-  border-radius: 1px;
+  border: 2px solid #fff;
+  border-radius: 3px;
   cursor: pointer;
 }
 
 .target-selected {
-  background: #e7f;
-  border-radius: 1px;
+  border: 2px solid #e7f;
+  border-radius: 3px;
   cursor: initial;
 }
 

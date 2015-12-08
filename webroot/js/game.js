@@ -221,7 +221,7 @@ var Box = React.createClass({
         
           this.setState(function (prevState, currProps) {
             prevState.entries.push({ 'private': false, chat: true, 'message': msg['user'] + ": " + msg['msg'] });
-            return { entries: prevState.entries, myTurn: true, actions: msg['actions'] };
+            return { entries: prevState.entries, actions: msg['actions'] };
           });
           break;
         case 12:
@@ -284,7 +284,7 @@ var Box = React.createClass({
         case 200:
           // Player has swapped or not with target player
           this.setState(function (prevState, currProps) {
-            prevState.entries.push({ 'private': false, 'message': prevState.players[prevState.turn] + " might have swapped with " + msg['target'] });
+            prevState.entries.push({ 'private': false, 'message': prevState.players[prevState.turn] + " might have swapped with " + (msg['target'] < 2 ? "middle card " + msg['target'] : msg['target']) });
             return { entries: prevState.entries };
           });
           break;
@@ -760,8 +760,8 @@ var CardRow = React.createClass({
       var cardFile = (this.props.cards[i]['card'] != null) ? this.GameCard[this.props.cards[i]['card']] : "cardBack";
       cards.push(React.createElement(
         'div',
-        { className: "col-sm-2 col-xs-3 player" + offset, onClick: (this.props.cards[i]['selected'] ? null : this.target.bind(this,this.props.cards[i]['index']) ) },
-        React.createElement('img', { className: "player-card" + (this.props.needTarget ? " need-target" : "") + (this.props.cards[i]['selected'] ? " target-selected" : ""),
+        { className: "col-sm-2 col-xs-4 player" + offset + (this.props.needTarget ? " need-target" : "") + (this.props.cards[i]['selected'] ? " target-selected" : ""), onClick: (this.props.cards[i]['selected'] ? null : this.target.bind(this,this.props.cards[i]['index']) ) },
+        React.createElement('img', { className: "player-card",
                                      src: "images/cardAssets/" + cardFile + ".png",
                                      }),
         React.createElement(
@@ -1000,7 +1000,7 @@ var ActionArea = React.createClass({
         React.createElement(
           'span',
           { className: 'gold my-gold' },
-          this.props.myCoins
+          (this.props.myCoins == undefined) ? "" : "Gold: " + this.props.myCoins
         )
       ),
       buttonsArea,
