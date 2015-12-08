@@ -12,6 +12,8 @@ Game coordinator can get you into a lobby and handle displaying multiple lobbies
 
 Users can change their password
 
+Chat/log spam prevention
+
 What could be improved
 ----------------------
 
