@@ -25,6 +25,12 @@ Premade accounts
 
 root:password
 
+Mysql credentials
+-----------------
+
+root:SekurePassword
+webapp:SekretPassWord
+
 Project Notes
 -------------
 
