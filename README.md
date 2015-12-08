@@ -23,7 +23,7 @@ Win/loss tracking
 Premade accounts
 ----------------
 
-testuser:password
+root:password
 
 Project Notes
 -------------
